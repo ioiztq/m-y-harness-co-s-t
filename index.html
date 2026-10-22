@@ -86,6 +86,7 @@ h1{font-size:20px;font-weight:650;letter-spacing:.3px}
 .cardhead .mini{margin-left:auto;font-size:11.5px;color:var(--muted)}
 
 .tablescroll{overflow-x:auto}
+.main .tablescroll table{table-layout:fixed}
 table{width:100%;border-collapse:separate;border-spacing:0;min-width:848px}
 thead th{
   font-size:11.5px;font-weight:600;color:var(--muted);text-align:left;
@@ -118,7 +119,7 @@ input.inp:disabled{background:#f4f7fb;color:var(--muted);cursor:not-allowed;opac
 
 /* 日工资：默认 / 自定 两态切换 */
 .wcell{display:flex;align-items:center;gap:4px}
-.wcell input.inp{flex:1 1 auto;min-width:0;width:auto}
+.wcell input.inp{flex:0 0 50px;min-width:0;width:50px;text-align:center;padding-left:4px;padding-right:4px}
 .wtog{
   flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--muted);
   font-family:inherit;font-size:10px;font-weight:700;padding:5px 6px;border-radius:6px;
@@ -213,6 +214,14 @@ footer b{color:var(--ink2)}
 .sync-card{max-width:540px}
 .mbtn.ghost{background:#fff;color:var(--ink2);border:1px solid var(--line)}
 .mbtn.ghost:hover{background:#f6f8fc;color:var(--pri)}
+.syncinfo{
+  font-size:11.5px;line-height:1.6;color:var(--ink2);background:#f4f7fc;border:1px solid var(--line);
+  border-radius:8px;padding:7px 10px;margin:0 0 10px;word-break:break-all;
+}
+.syncinfo:empty{display:none}
+.syncinfo b{color:var(--ink)}
+.syncinfo .bad{color:var(--hot);font-weight:600}
+.syncinfo .good{color:var(--ok);font-weight:600}
 .modal-card .close-row{gap:8px}
 .syncdoc{margin:0 0 14px;font-size:11.5px;color:var(--ink2)}
 .syncdoc summary{cursor:pointer;color:var(--pri2);font-weight:600;padding:3px 0;outline:none}
@@ -296,6 +305,16 @@ footer b{color:var(--ink2)}
   font-variant-numeric:tabular-nums;letter-spacing:.5px;
 }
 .gfield input:focus{border-color:#4472c4;background:#fff;box-shadow:0 0 0 3px rgba(68,114,196,.14)}
+.gfield .pwrap{position:relative}
+.gfield .pwrap input{padding-right:58px}
+.peek{
+  position:absolute;right:6px;top:50%;transform:translateY(-50%);
+  border:1px solid transparent;background:transparent;color:#7b8698;
+  font-size:11.5px;font-weight:600;font-family:inherit;padding:6px 8px;border-radius:6px;
+  cursor:pointer;line-height:1;transition:.15s;letter-spacing:0;
+}
+.peek:hover{background:#eef3fb;color:#2f5597}
+.peek.on{color:#2f5597;background:#e8f0fc;border-color:#d3e0f5}
 .gerr{min-height:18px;font-size:12px;color:#c0392b;text-align:left;margin:2px 0 10px;line-height:1.5}
 .gbtn{
   width:100%;border:none;border-radius:9px;padding:11px;font-size:14px;font-weight:600;font-family:inherit;
@@ -423,20 +442,35 @@ footer b{color:var(--ink2)}
   .main .tablescroll td:nth-child(7) .pbar{flex:1;min-width:0}
   .main .tablescroll .pbar .track{min-width:0;height:5px}
   .main .tablescroll .wcell{gap:3px}
+  .main .tablescroll .wcell input.inp{flex:1 1 auto;width:auto;text-align:center}
   .main .tablescroll .wtog{font-size:9.5px;padding:0 5px;height:30px;border-radius:5px}
   .main .tablescroll .cell-main{font-size:12.5px;margin-right:4px}
   .main .tablescroll .cell-sub{font-size:9px;line-height:1.2}
   .badge{font-size:10px;padding:1px 7px}
-  .dict tbody tr{position:relative}
-  .dict tbody td:nth-child(1){grid-column:1/-1}
+  /* —— 工序单价字典：与工序清单一致的卡片化排布（3 列 × 4 行） —— */
+  .dict tbody tr{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:3px 7px;padding:6px 9px 7px;border-bottom:1px solid var(--line);position:relative;
+  }
+  .dict tbody tr:last-child{border-bottom:none}
+  .dict tbody td{padding:0!important;border:none;min-width:0}
+  /* 第1行：名称（跨3列，右侧留删除位） / 第2行：编号 类别 单位 / 第3行：计价 单价 工时 / 第4行：折算 备注 */
+  .dict tbody td:nth-child(1){grid-column:1/-1;order:1}
   .dict tbody td:nth-child(1) input{width:calc(100% - 42px)}
-  .dict tbody td:nth-child(2){grid-column:1}
-  .dict tbody td:nth-child(3){grid-column:2}
-  .dict tbody td:nth-child(8){grid-column:1/-1}
-  .dict tbody td:nth-child(9){grid-column:1/-1}
-  .dict tbody td:nth-child(10){position:absolute;top:8px;right:10px;z-index:2}
-  .dict input.inp.tiny{text-align:left;font-size:16px;min-height:38px}
-  .dict .cell-main{font-size:14px}
+  .dict tbody td:nth-child(2){grid-column:1;order:2}
+  .dict tbody td:nth-child(3){grid-column:2;order:3}
+  .dict tbody td:nth-child(6){grid-column:3;order:4}
+  .dict tbody td:nth-child(4){grid-column:1;order:5}
+  .dict tbody td:nth-child(5){grid-column:2;order:6}
+  .dict tbody td:nth-child(7){grid-column:3;order:7}
+  .dict tbody td:nth-child(8){grid-column:1;order:8;align-self:end}
+  .dict tbody td:nth-child(9){grid-column:2/-1;order:9}
+  .dict tbody td:nth-child(10){position:absolute;top:6px;right:8px;z-index:2}
+  .dict input.inp.tiny{text-align:left;font-size:16px;min-height:30px;padding:4px 7px}
+  .dict select{font-size:16px;min-height:30px;padding:4px 20px 4px 7px}
+  .dict .cell-main{font-size:13px}
+  .dict .cell-sub{font-size:9px;line-height:1.25}
+  .dict .del{min-height:32px;padding:2px 9px}
   .del{font-size:20px;line-height:1;padding:4px 10px;min-height:34px;color:#b8c0cd}
   .tfoot{flex-wrap:wrap;padding:11px 12px;gap:8px}
   .tfoot .hint{flex:1 1 100%;margin-left:0;font-size:11px;line-height:1.55}
@@ -486,7 +520,10 @@ footer b{color:var(--ink2)}
         <input id="gUser" type="text" inputmode="text" autocapitalize="characters" maxlength="32" autocomplete="off" spellcheck="false" placeholder="请输入账号">
       </label>
       <label class="gfield"><span>密码</span>
-        <input id="gPass" type="password" maxlength="64" autocomplete="off" placeholder="请输入密码">
+        <div class="pwrap">
+          <input id="gPass" type="password" maxlength="64" autocomplete="off" placeholder="请输入密码">
+          <button type="button" class="peek" id="gPeek" aria-pressed="false" title="显示/隐藏密码" tabindex="-1">显示</button>
+        </div>
       </label>
       <div class="gerr" id="gErr"></div>
       <button type="submit" class="gbtn" id="gBtn">登 录</button>
@@ -557,14 +594,14 @@ footer b{color:var(--ink2)}
         <table>
           <thead>
             <tr>
-              <th style="width:130px">工序</th>
-              <th style="width:86px">计价方式</th>
-              <th style="width:112px">单价（元）</th>
-              <th style="width:92px">单套用量</th>
-              <th style="width:128px">日工资（元）</th>
-              <th style="width:110px">工序成本（元）</th>
-              <th style="width:146px">占单套成本</th>
-              <th style="width:44px"></th>
+              <th style="width:162px">工序</th>
+              <th style="width:84px">计价方式</th>
+              <th style="width:122px">单价（元）</th>
+              <th style="width:90px">单套用量</th>
+              <th style="width:110px">日工资（元）</th>
+              <th style="width:104px">工序成本（元）</th>
+              <th style="width:132px">占单套成本</th>
+              <th style="width:46px"></th>
             </tr>
           </thead>
           <tbody id="grid"></tbody>
@@ -686,6 +723,7 @@ footer b{color:var(--ink2)}
     <label class="gfield"><span>同步通道（同一份数据用同一个名字）</span>
       <input id="syncCh" type="text" spellcheck="false" autocapitalize="off" autocomplete="off" value="default" maxlength="32" placeholder="default">
     </label>
+    <div class="syncinfo" id="syncInfo"></div>
     <div class="gerr" id="syncErr"></div>
     <details class="syncdoc">
       <summary>首次使用？点这里看 3 步配置说明</summary>
@@ -708,6 +746,7 @@ grant all on public.shared_state to anon;</pre>
       </ol>
     </details>
     <div class="close-row">
+      <button type="button" class="mbtn ghost" id="syncNow">立即同步一次</button>
       <button type="button" class="mbtn ghost" id="syncOff">断开同步</button>
       <button type="button" class="mbtn" id="syncSave">测试并保存</button>
     </div>
@@ -873,15 +912,15 @@ grant all on public.shared_state to anon;</pre>
           unit = Number(d.price) || 0;
           if(unit > 0){
             cls = "piece";
-            note = d.unit + " · 字典价";
+            note = d.unit;
           }else{
             cls = "missing";
-            note = "字典未填单价 · 待定价";
+            note = "字典未填单价";
           }
         }else{
           unit = dailyOut > 0 ? wage / dailyOut : 0;
           cls = "time";
-          note = nf(wage) + " ÷ " + nf(Math.round(dailyOut)) + " 件/日 = " + unit.toFixed(3) + " 元";
+          note = nf(wage) + " ÷ " + nf(Math.round(dailyOut)) + " 件/日";
         }
       }
       return {i, name:r.name, d, qty, wage, unit, cost: qty * unit, mode, dailyOut, note, cls};
@@ -1016,7 +1055,7 @@ grant all on public.shared_state to anon;</pre>
         + '<td data-lb="工序名称"><input class="inp tiny" style="text-align:left" value="' + esc(d.name) + '" maxlength="40" data-di="' + i + '" data-dk="name"></td>'
         + '<td data-lb="工序编号"><input class="inp tiny" style="text-align:center" value="' + esc(d.code || "") + '" maxlength="20" placeholder="选填" data-di="' + i + '" data-dk="code"></td>'
         + '<td data-lb="工序类别"><input class="inp tiny" style="text-align:left" value="' + esc(d.cat) + '" maxlength="20" data-di="' + i + '" data-dk="cat"></td>'
-        + '<td data-lb="计价方式"><select data-di="' + i + '" data-dk="mode"><option value="piece"' + pieceSel + '>计件单价</option>'
+        + '<td data-lb="计价方式"><select data-di="' + i + '" data-dk="mode"><option value="piece"' + pieceSel + '>计件</option>'
         + '<option value="time"' + timeSel + '>按工时</option></select></td>'
         + '<td data-lb="工序单价（元）"><input class="inp tiny" type="number" min="0" step="0.001"' + priceAttr + ' data-di="' + i + '" data-dk="price"></td>'
         + '<td data-lb="计量单位"><input class="inp tiny" value="' + esc(d.unit) + '" maxlength="12" data-di="' + i + '" data-dk="unit"></td>'
@@ -2398,6 +2437,33 @@ grant all on public.shared_state to anon;</pre>
     location.reload();
   }
 
+  /* ---- 密码显示/隐藏 ---- */
+  function peekReset() {
+    var inp = $("gPass"), btn = $("gPeek");
+    if (!inp || !btn) return;
+    inp.type = "password";
+    btn.textContent = "显示";
+    btn.classList.remove("on");
+    btn.setAttribute("aria-pressed", "false");
+  }
+  (function bindPeek() {
+    var inp = $("gPass"), btn = $("gPeek");
+    if (!inp || !btn) return;
+    btn.addEventListener("click", function (ev) {
+      ev.preventDefault();
+      var show = inp.type === "password";
+      inp.type = show ? "text" : "password";
+      btn.textContent = show ? "隐藏" : "显示";
+      btn.classList.toggle("on", show);
+      btn.setAttribute("aria-pressed", show ? "true" : "false");
+      try {
+        inp.focus();
+        var n = inp.value.length;
+        inp.setSelectionRange(n, n);
+      } catch (e) {}
+    });
+  })();
+
   function tick() {
     var left = readLock().until - Date.now();
     var btn = $("gBtn");
@@ -2432,13 +2498,15 @@ grant all on public.shared_state to anon;</pre>
   /* ---- 提交登录 ---- */
   $("loginForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
-    var u = $("gUser").value.trim();
+    var rawU = $("gUser").value.trim();
+    var u = rawU;
     /* 账号不区分大小写：先归一化到 USERS 里的规范写法，再用规范账号参与摘要 */
     if (u && !USERS[u]) {
       var lc = u.toLowerCase();
       for (var k in USERS) { if (k.toLowerCase() === lc) { u = k; break; } }
     }
-    var pw = $("gPass").value;
+    /* 密码去掉首尾空格：手机键盘（尤其自动补全）常在末尾带一个空格 */
+    var pw = $("gPass").value.replace(/^[\s\u3000]+|[\s\u3000]+$/g, "");
     var lk = readLock();
 
     if (lk.until > Date.now()) {
@@ -2463,15 +2531,24 @@ grant all on public.shared_state to anon;</pre>
       }
 
       lk.n = (lk.n || 0) + 1;
+      /* 常见笔误：字母和数字的顺序写反了（如 123456CBHS），直接点明正确写法 */
+      var hint = "";
+      if (!USERS[u]) {
+        var sig = function (s) { return String(s).toLowerCase().split("").sort().join(""); };
+        for (var k2 in USERS) {
+          if (sig(k2) === sig(rawU)) { hint = "（账号为 " + k2 + "，字母在前、数字在后）"; break; }
+        }
+      }
       if (lk.n >= MAX_TRY) {
         writeLock({ n: 0, until: Date.now() + LOCK_MS });
-        setErr("错误次数过多，已锁定 60 秒");
+        setErr("错误次数过多，已锁定 60 秒" + hint);
         startTimer();
       } else {
         writeLock(lk);
-        setErr("账号或密码错误，还可尝试 " + (MAX_TRY - lk.n) + " 次");
+        setErr((hint ? "账号写错了" : "账号或密码错误") + hint + "，还可尝试 " + (MAX_TRY - lk.n) + " 次");
       }
       $("gPass").value = "";
+      peekReset();
       $("gPass").focus();
     }).catch(function () {
       $("gBtn").disabled = false;
@@ -2524,7 +2601,11 @@ grant all on public.shared_state to anon;</pre>
   function base() { return cfg.url.replace(/\/+$/, "").replace(/\/rest\/v1$/, "") + "/rest/v1/shared_state"; }
   function ch() { return encodeURIComponent(cfg.channel || "default"); }
   function hdr(extra) {
-    var h = { "apikey": cfg.key, "Authorization": "Bearer " + cfg.key, "Content-Type": "application/json" };
+    var h = { "apikey": cfg.key, "Content-Type": "application/json" };
+    /* 新版 Supabase 的 sb_publishable_… 密钥不是 JWT，放进 Authorization 会 401；只有 JWT 才加 */
+    if (/^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(cfg.key)) {
+      h["Authorization"] = "Bearer " + cfg.key;
+    }
     if (extra) for (var k in extra) h[k] = extra[k];
     return h;
   }
@@ -2539,78 +2620,129 @@ grant all on public.shared_state to anon;</pre>
     el.className = "dstate sync" + (cls ? " " + cls : "");
   }
 
+  /* ---------- 诊断信息（显示在设置弹层里，便于定位为什么不同步） ---------- */
+  var diag = { state: "idle", detail: "", lastOk: "", cloudRev: null, updatedAt: "", bytes: 0 };
+  function esc2(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
+  function paintInfo() {
+    var el = $("syncInfo");
+    if (!el) return;
+    if (!cfg) { el.innerHTML = ""; return; }
+    var rows = [];
+    rows.push("通道 <b>" + esc2(cfg.channel || "default") + "</b> · 地址 <b>" + esc2(cfg.url) + "</b>");
+    rows.push("密钥 " + (cfg.key.length) + " 位 · " + (/^eyJ/.test(cfg.key) ? "JWT 类型" : "publishable 类型"));
+    var st;
+    if (diag.state === "ok") st = '<span class="good">连接正常</span>，云端版本 rev ' + diag.cloudRev + (diag.updatedAt ? "（更新于 " + esc2(diag.updatedAt) + "）" : "");
+    else if (diag.state === "err") st = '<span class="bad">同步失败</span>：' + esc2(diag.detail);
+    else if (diag.state === "push") st = "正在上传…";
+    else st = "尚未连接（保存后会自动连接）";
+    rows.push(st);
+    if (diag.lastOk) rows.push("最近一次成功 " + diag.lastOk + " · 本机 rev " + rev);
+    el.innerHTML = rows.join("<br>");
+  }
+
+  /* ---------- 请求封装：把 HTTP 状态翻译成人能看懂的原因 ---------- */
+  function httpErr(status, body) {
+    var msg = "HTTP " + status;
+    if (status === 401 || status === 403) msg += " · 公钥无效或没有权限（anon key 是否复制完整？RLS 策略是否已建？）";
+    else if (status === 404) msg += " · 找不到 shared_state 表（建表 SQL 是否执行成功？）";
+    else if (status === 400) msg += " · 请求被拒（表结构不一致，或 payload 非 jsonb）";
+    else if (status === 409) msg += " · 该通道记录已存在";
+    else if (status >= 500) msg += " · 云端服务异常，稍后重试";
+    var b = String(body || "").replace(/\s+/g, " ").slice(0, 140);
+    if (b) msg += " · " + b;
+    return new Error(msg);
+  }
+  function req(method, url, body, extra) {
+    var opt = { method: method, headers: hdr(extra), cache: "no-store" };
+    if (body !== undefined) opt.body = JSON.stringify(body);
+    return fetch(url, opt).then(function (r) {
+      return r.text().then(function (t) {
+        if (!r.ok) throw httpErr(r.status, t);
+        diag.bytes = t.length;
+        if (!t) return [];
+        try { return JSON.parse(t); } catch (e) { return []; }
+      });
+    }, function (e) {
+      throw new Error("连不上云端（" + (e && e.message ? e.message : "网络错误") + "）：检查项目地址、手机网络，或浏览器是否拦截了跨域请求");
+    });
+  }
+
   /* ---------- 远端读写 ---------- */
   function pull() {
-    return fetch(base() + "?id=eq." + ch() + "&select=rev,payload,updated_at", {
-      headers: hdr(), cache: "no-store"
-    }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    }).then(function (rows) {
-      return (Array.isArray(rows) && rows.length) ? rows[0] : null;
-    });
+    return req("GET", base() + "?id=eq." + ch() + "&select=rev,payload,updated_at")
+      .then(function (rows) { return (Array.isArray(rows) && rows.length) ? rows[0] : null; });
   }
 
   function create(payload) {
-    return fetch(base(), {
-      method: "POST",
-      headers: hdr({ "Prefer": "return=representation" }),
-      body: JSON.stringify({ id: cfg.channel || "default", payload: payload, rev: 1, updated_at: new Date().toISOString() })
-    }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    });
+    return req("POST", base(), { id: cfg.channel || "default", payload: payload, rev: 1, updated_at: new Date().toISOString() },
+      { "Prefer": "return=representation" });
   }
 
   function patch(payload) {
-    return fetch(base() + "?id=eq." + ch() + "&rev=eq." + rev, {
-      method: "PATCH",
-      headers: hdr({ "Prefer": "return=representation" }),
-      body: JSON.stringify({ payload: payload, rev: rev + 1, updated_at: new Date().toISOString() })
-    }).then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.json();
-    });
+    return req("PATCH", base() + "?id=eq." + ch() + "&rev=eq." + rev,
+      { payload: payload, rev: rev + 1, updated_at: new Date().toISOString() },
+      { "Prefer": "return=representation" });
   }
 
   /* ---------- 应用远端 ---------- */
   function adopt(row) {
-    if (!row || !row.payload) return;
+    if (!row || !row.payload) return false;
     var nr = Number(row.rev) || 0;
-    if (nr <= rev) return;
+    if (nr <= rev) return false;
     applying = true;
     var ok = window.WHApp.applyRemote(row.payload);
     if (ok) {
       rev = nr; storeRev();
       lastSent = JSON.stringify(window.WHApp.state);
+      diag.state = "ok"; diag.detail = ""; diag.cloudRev = nr; diag.lastOk = hhmm();
+      diag.updatedAt = String(row.updated_at || "").replace("T", " ").slice(0, 19);
       badge("☁ 已同步 " + hhmm(), "ok");
     }
     setTimeout(function () { applying = false; }, 1200);
+    return !!ok;
   }
 
-  /* ---------- 推送 ---------- */
-  function doPush() {
-    if (!cfg || applying || pushing || !window.WHApp || !window.WHApp.authed()) return;
-    var payload = window.WHApp.state;
-    var snap = JSON.stringify(payload);
-    if (snap === lastSent) return;
-    pushing = true;
-    badge("☁ 同步中…");
-    patch(payload).then(function (rows) {
-      pushing = false;
+  /* ---------- 推送：版本冲突时以本地为准重试，不让编辑静默丢失 ---------- */
+  function syncUp(payload, snap, depth) {
+    return patch(payload).then(function (rows) {
       if (Array.isArray(rows) && rows.length) {
         rev = rev + 1; storeRev(); lastSent = snap;
-        badge("☁ 已同步 " + hhmm(), "ok");
-      } else {
-        /* 版本号落后：别人先写过，拉最新的覆盖 */
-        return pull().then(function (row) {
-          if (row) adopt(row);
-          else return create(payload).then(function () { rev = 1; storeRev(); lastSent = snap; badge("☁ 已同步 " + hhmm(), "ok"); });
-        });
+        diag.cloudRev = rev;
+        return;
       }
+      /* 本地 rev 落后：取云端真实版本号，再用本地内容覆盖 */
+      return pull().then(function (row) {
+        if (!row) {
+          return create(payload).then(function () {
+            rev = 1; storeRev(); lastSent = snap; diag.cloudRev = 1;
+          });
+        }
+        rev = Number(row.rev) || 0; storeRev();
+        if (depth >= 2) throw new Error("云端版本被反复改写，稍后会自动重试");
+        return syncUp(payload, snap, depth + 1);
+      });
+    });
+  }
+
+  function doPush() {
+    if (!cfg || applying || pushing || !window.WHApp || !window.WHApp.authed()) return Promise.resolve();
+    var payload = window.WHApp.state;
+    var snap = JSON.stringify(payload);
+    if (snap === lastSent) return Promise.resolve();
+    pushing = true;
+    diag.state = "push";
+    badge("☁ 同步中…");
+    paintInfo();
+    return syncUp(payload, snap, 0).then(function () {
+      pushing = false;
+      diag.state = "ok"; diag.detail = ""; diag.lastOk = hhmm();
+      badge("☁ 已同步 " + hhmm(), "ok");
+      paintInfo();
     }).catch(function (e) {
       pushing = false;
+      diag.state = "err"; diag.detail = e.message;
       badge("☁ 同步失败", "err");
+      paintInfo();
       console.warn("[sync] push:", e.message);
     });
   }
@@ -2625,15 +2757,28 @@ grant all on public.shared_state to anon;</pre>
   function pollOnce() {
     if (!cfg || document.hidden || !window.WHApp || !window.WHApp.authed()) return;
     pull().then(function (row) {
-      if (!row) return;
+      if (!row) {
+        /* 云端记录被删掉了：以本地为准补一份 */
+        lastSent = "";
+        return doPush();
+      }
+      diag.cloudRev = Number(row.rev) || 0;
+      diag.updatedAt = String(row.updated_at || "").replace("T", " ").slice(0, 19);
       if (Number(row.rev) > rev) {
         /* 正在输入时先不打断，下一轮再同步 */
         var a = document.activeElement;
         if (a && (a.tagName === "INPUT" || a.tagName === "SELECT" || a.tagName === "TEXTAREA") && $("app").contains(a)) return;
         adopt(row);
+        if ($("syncModal") && $("syncModal").classList.contains("on")) paintInfo();
+      } else if (diag.state === "err") {
+        diag.state = "ok"; diag.detail = "";
+        badge("☁ 已同步 " + hhmm(), "ok");
+        if ($("syncModal") && $("syncModal").classList.contains("on")) paintInfo();
       }
     }).catch(function (e) {
+      diag.state = "err"; diag.detail = e.message;
       badge("☁ 同步失败", "err");
+      if ($("syncModal") && $("syncModal").classList.contains("on")) paintInfo();
       console.warn("[sync] poll:", e.message);
     });
   }
@@ -2643,17 +2788,36 @@ grant all on public.shared_state to anon;</pre>
     started = true;
     loadRev();
     badge("☁ 连接中…");
+    diag.state = "idle"; diag.detail = "";
+    paintInfo();
     pull().then(function (row) {
+      diag.lastOk = hhmm();
       if (!row) {
         return create(window.WHApp.state).then(function () {
           rev = 1; storeRev(); lastSent = JSON.stringify(window.WHApp.state);
+          diag.state = "ok"; diag.cloudRev = 1; diag.updatedAt = "";
           badge("☁ 已创建 " + hhmm(), "ok");
+          paintInfo();
         });
       }
-      if (Number(row.rev) > rev) adopt(row);
-      else { lastSent = JSON.stringify(window.WHApp.state); badge("☁ 已同步 " + hhmm(), "ok"); }
+      diag.state = "ok";
+      diag.cloudRev = Number(row.rev) || 0;
+      diag.updatedAt = String(row.updated_at || "").replace("T", " ").slice(0, 19);
+      if (Number(row.rev) > rev) { adopt(row); paintInfo(); return; }
+      /* 云端版本不高于本地：内容一致就只标记，不一致则以本地为准推上去 */
+      var snap = JSON.stringify(window.WHApp.state);
+      if (snap === JSON.stringify(row.payload || {})) {
+        lastSent = snap;
+        badge("☁ 已同步 " + hhmm(), "ok");
+      } else {
+        lastSent = "";
+        doPush();
+      }
+      paintInfo();
     }).catch(function (e) {
+      diag.state = "err"; diag.detail = e.message;
       badge("☁ 连接失败", "err");
+      paintInfo();
       console.warn("[sync] start:", e.message);
       started = false;
     });
@@ -2665,6 +2829,8 @@ grant all on public.shared_state to anon;</pre>
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
     if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
     started = false;
+    diag.state = "idle"; diag.detail = ""; diag.cloudRev = null; diag.updatedAt = "";
+    paintInfo();
     if (window.WHApp) window.WHApp.saveHook = null;
   }
 
@@ -2677,12 +2843,15 @@ grant all on public.shared_state to anon;</pre>
       $("syncKey").value = cfg.key;
       $("syncCh").value = cfg.channel || "default";
     }
+    paintInfo();
     $("syncModal").classList.add("on");
   }
   function closeSync() { $("syncModal").classList.remove("on"); }
 
   function readForm() {
-    var u = ($("syncUrl").value || "").trim().replace(/\/+$/, "");
+    var u = ($("syncUrl").value || "").trim()
+      .replace(/\/+$/, "")
+      .replace(/\/rest\/v1\/?$/, "");
     var k = ($("syncKey").value || "").trim();
     var c = ($("syncCh").value || "").trim() || "default";
     if (!/^https:\/\/[A-Za-z0-9-]+\.supabase\.co$/i.test(u)) {
@@ -2716,9 +2885,15 @@ grant all on public.shared_state to anon;</pre>
       sv.disabled = true;
       var probe = { url: c.url, key: c.key, channel: c.channel };
       var bak = cfg; cfg = probe;
-      pull().then(function () {
+      pull().then(function (row) {
         cfg = c; storeCfg(); stop(); started = false;
-        $("syncErr").textContent = "";
+        var persisted = true;
+        try { persisted = !!localStorage.getItem(CFG_KEY); } catch (e2) { persisted = false; }
+        if (!persisted) {
+          $("syncErr").textContent = "已连接，但浏览器禁止了本地存储（无痕/隐私模式），配置存不住，关掉页面后需重新填写。";
+        } else {
+          $("syncErr").textContent = "";
+        }
         sv.disabled = false;
         closeSync();
         start();
@@ -2729,6 +2904,41 @@ grant all on public.shared_state to anon;</pre>
     });
     var m = $("syncModal");
     if (m) m.addEventListener("click", function (e) { if (e.target === this) closeSync(); });
+
+    /* 立即同步一次：拉最新 → 若本地更新则推上去，并把结果写进弹层 */
+    var sn = $("syncNow");
+    if (sn) sn.addEventListener("click", function () {
+      if (!cfg) { $("syncErr").textContent = "还没有保存过同步设置，先填上面的地址和公钥"; return; }
+      sn.disabled = true;
+      $("syncErr").textContent = "正在同步…";
+      pull().then(function (row) {
+        if (!row) {
+          return create(window.WHApp.state).then(function () {
+            rev = 1; storeRev(); lastSent = JSON.stringify(window.WHApp.state);
+            diag.state = "ok"; diag.cloudRev = 1; diag.lastOk = hhmm();
+          });
+        }
+        diag.cloudRev = Number(row.rev) || 0;
+        diag.updatedAt = String(row.updated_at || "").replace("T", " ").slice(0, 19);
+        if (Number(row.rev) > rev) { adopt(row); return; }
+        lastSent = "";
+        return doPush();
+      }).then(function () {
+        sn.disabled = false;
+        if (diag.state === "err") $("syncErr").textContent = "同步失败：" + diag.detail;
+        else $("syncErr").textContent = "";
+        paintInfo();
+      }).catch(function (e) {
+        sn.disabled = false;
+        diag.state = "err"; diag.detail = e.message;
+        $("syncErr").textContent = "同步失败：" + e.message;
+        paintInfo();
+      });
+    });
+
+    /* 底部同步徽标也可点开设置 */
+    var sd = $("syncState");
+    if (sd) { sd.style.cursor = "pointer"; sd.title = "点击打开云同步设置"; sd.addEventListener("click", openSync); }
 
     if (cfg && window.WHApp && window.WHApp.authed()) start();
   });
