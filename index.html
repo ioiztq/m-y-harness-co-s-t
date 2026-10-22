@@ -222,6 +222,8 @@ footer b{color:var(--ink2)}
 .syncinfo b{color:var(--ink)}
 .syncinfo .bad{color:var(--hot);font-weight:600}
 .syncinfo .good{color:var(--ok);font-weight:600}
+.syncshare{font-size:11px;color:var(--muted);line-height:1.65;margin:0 0 10px;text-align:left}
+.syncshare .linkbtn{color:var(--pri2);font-weight:600;margin-right:2px}
 .modal-card .close-row{gap:8px}
 .syncdoc{margin:0 0 14px;font-size:11.5px;color:var(--ink2)}
 .syncdoc summary{cursor:pointer;color:var(--pri2);font-weight:600;padding:3px 0;outline:none}
@@ -447,30 +449,31 @@ footer b{color:var(--ink2)}
   .main .tablescroll .cell-main{font-size:12.5px;margin-right:4px}
   .main .tablescroll .cell-sub{font-size:9px;line-height:1.2}
   .badge{font-size:10px;padding:1px 7px}
-  /* —— 工序单价字典：与工序清单一致的卡片化排布（3 列 × 4 行） —— */
+  /* —— 工序单价字典：完全对齐工序清单的卡片结构 —— */
   .dict tbody tr{
     display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
-    gap:3px 7px;padding:6px 9px 7px;border-bottom:1px solid var(--line);position:relative;
+    gap:3px 7px;padding:6px 9px 7px;border-bottom:1px solid var(--line);
+    border-left:3px solid transparent;align-items:center;
   }
   .dict tbody tr:last-child{border-bottom:none}
   .dict tbody td{padding:0!important;border:none;min-width:0}
-  /* 第1行：名称（跨3列，右侧留删除位） / 第2行：编号 类别 单位 / 第3行：计价 单价 工时 / 第4行：折算 备注 */
-  .dict tbody td:nth-child(1){grid-column:1/-1;order:1}
-  .dict tbody td:nth-child(1) input{width:calc(100% - 42px)}
-  .dict tbody td:nth-child(2){grid-column:1;order:2}
-  .dict tbody td:nth-child(3){grid-column:2;order:3}
-  .dict tbody td:nth-child(6){grid-column:3;order:4}
-  .dict tbody td:nth-child(4){grid-column:1;order:5}
-  .dict tbody td:nth-child(5){grid-column:2;order:6}
-  .dict tbody td:nth-child(7){grid-column:3;order:7}
-  .dict tbody td:nth-child(8){grid-column:1;order:8;align-self:end}
-  .dict tbody td:nth-child(9){grid-column:2/-1;order:9}
-  .dict tbody td:nth-child(10){position:absolute;top:6px;right:8px;z-index:2}
+  /* 第1行：名称 + 折算（右上，对应工序卡的"工序成本"） / 第2行：计价 单价 工时 / 第3行：编号 类别 单位 / 第4行：备注 + 删除 */
+  .dict tbody td:nth-child(1){grid-column:1/3;order:1}
+  .dict tbody td:nth-child(8){grid-column:3;order:2;text-align:right}
+  .dict tbody td:nth-child(8)::before{text-align:right}
+  .dict tbody td:nth-child(4){grid-column:1;order:3}
+  .dict tbody td:nth-child(5){grid-column:2;order:4}
+  .dict tbody td:nth-child(7){grid-column:3;order:5}
+  .dict tbody td:nth-child(2){grid-column:1;order:6}
+  .dict tbody td:nth-child(3){grid-column:2;order:7}
+  .dict tbody td:nth-child(6){grid-column:3;order:8}
+  .dict tbody td:nth-child(9){grid-column:1/3;order:9}
+  .dict tbody td:nth-child(10){grid-column:3;order:10;justify-self:end}
   .dict input.inp.tiny{text-align:left;font-size:16px;min-height:30px;padding:4px 7px}
   .dict select{font-size:16px;min-height:30px;padding:4px 20px 4px 7px}
-  .dict .cell-main{font-size:13px}
+  .dict .cell-main{font-size:15px;font-weight:700;letter-spacing:-.2px}
   .dict .cell-sub{font-size:9px;line-height:1.25}
-  .dict .del{min-height:32px;padding:2px 9px}
+  .dict .del{min-height:30px;padding:2px 9px}
   .del{font-size:20px;line-height:1;padding:4px 10px;min-height:34px;color:#b8c0cd}
   .tfoot{flex-wrap:wrap;padding:11px 12px;gap:8px}
   .tfoot .hint{flex:1 1 100%;margin-left:0;font-size:11px;line-height:1.55}
@@ -745,6 +748,10 @@ grant all on public.shared_state to anon;</pre>
         <li>左侧 <b>Project Settings → API</b>，复制 <b>Project URL</b> 和 <b>anon public</b> 两条，粘到上面保存。</li>
       </ol>
     </details>
+    <div class="syncshare">
+      <button type="button" class="linkbtn" id="syncLink">复制同步链接</button>
+      <span>换浏览器 / 换手机时，打开这个链接会自动带好配置并拉取同一份数据。链接里含公钥，只发给自己。</span>
+    </div>
     <div class="close-row">
       <button type="button" class="mbtn ghost" id="syncNow">立即同步一次</button>
       <button type="button" class="mbtn ghost" id="syncOff">断开同步</button>
@@ -2585,8 +2592,23 @@ grant all on public.shared_state to anon;</pre>
 
   var CFG_KEY = "wh-sync-cfg-v1", REV_KEY = "wh-sync-rev-v1";
   var $ = function (id) { return document.getElementById(id); };
+
+  /* 轻提示：本模块自带一份，不依赖其它脚本块的加载顺序 */
+  function toast(msg, ms) {
+    var el = $("whToast");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "whToast";
+      el.className = "toast";
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.classList.remove("show"); }, ms || 3600);
+  }
   var cfg = null, rev = 0, applying = false, pushing = false;
-  var pushTimer = null, pollTimer = null, lastSent = "", started = false;
+  var pushTimer = null, pollTimer = null, lastSent = "", started = false, linkLoaded = false;
 
   function loadCfg() {
     try {
@@ -2834,7 +2856,55 @@ grant all on public.shared_state to anon;</pre>
     if (window.WHApp) window.WHApp.saveHook = null;
   }
 
-  /* ---------- 设置弹层 ---------- */
+  /* ---------- 跨浏览器配置搬运：把 URL + 公钥 + 通道编进链接 ---------- */
+  function b64enc(str) {
+    var b = btoa(unescape(encodeURIComponent(str)));
+    return b.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function b64dec(s) {
+    var b = s.replace(/-/g, "+").replace(/_/g, "/");
+    while (b.length % 4) b += "=";
+    return decodeURIComponent(escape(atob(b)));
+  }
+  function makeLink() {
+    if (!cfg) return "";
+    var raw = JSON.stringify({ u: cfg.url, k: cfg.key, c: cfg.channel || "default" });
+    return location.origin + location.pathname + location.search + "#sync=" + b64enc(raw);
+  }
+  /* 打开带 #sync=… 的链接时自动落配置；随后把 hash 从地址栏抹掉，避免公钥留在历史记录里 */
+  function applyHash() {
+    var m = /(?:^|[#&])sync=([A-Za-z0-9\-_]+)/.exec(location.hash || "");
+    if (!m) return false;
+    var obj = null;
+    try { obj = JSON.parse(b64dec(m[1])); } catch (e) { obj = null; }
+    if (!obj || !obj.u || !obj.k) return false;
+    var u = String(obj.u).replace(/\/+$/, "").replace(/\/rest\/v1\/?$/, "");
+    if (!/^https:\/\/[A-Za-z0-9-]+\.supabase\.co$/i.test(u)) return false;
+    var c = String(obj.c || "default");
+    if (!/^[A-Za-z0-9_-]{1,32}$/.test(c)) c = "default";
+    cfg = { url: u, key: String(obj.k), channel: c };
+    storeCfg();
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+    return true;
+  }
+  function copyText(t) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(t);
+    }
+    return new Promise(function (res, rej) {
+      var ta = document.createElement("textarea");
+      ta.value = t;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      ok ? res() : rej(new Error("execCommand copy failed"));
+    });
+  }
+
   function openSync() {
     if (!$("syncModal")) return;
     $("syncErr").textContent = "";
@@ -2866,6 +2936,8 @@ grant all on public.shared_state to anon;</pre>
   document.addEventListener("DOMContentLoaded", function () {
     loadCfg();
     loadRev();
+    var fromLink = applyHash();
+    if (fromLink && !(window.WHApp && window.WHApp.authed())) linkLoaded = true;
     var b = $("syncBtn");
     if (b) b.addEventListener("click", openSync);
     var off = $("syncOff");
@@ -2940,11 +3012,31 @@ grant all on public.shared_state to anon;</pre>
     var sd = $("syncState");
     if (sd) { sd.style.cursor = "pointer"; sd.title = "点击打开云同步设置"; sd.addEventListener("click", openSync); }
 
+    /* 复制同步链接：换浏览器 / 换手机时用 */
+    var sl = $("syncLink");
+    if (sl) sl.addEventListener("click", function () {
+      if (!cfg) { $("syncErr").textContent = "先在上面填好地址和公钥并保存，再复制链接"; return; }
+      var link = makeLink();
+      copyText(link).then(function () {
+        $("syncErr").textContent = "";
+        toast("同步链接已复制，在新浏览器或手机上打开即可");
+      }).catch(function () {
+        $("syncErr").textContent = "";
+        try { window.prompt("复制下面这行链接，在另一个浏览器里打开：", link); } catch (e) {}
+      });
+    });
+
     if (cfg && window.WHApp && window.WHApp.authed()) start();
+    if (fromLink && window.WHApp && window.WHApp.authed()) {
+      toast("已从链接载入同步配置");
+    }
   });
 
   /* 登录成功后再启动同步 */
-  document.addEventListener("wh:login", function () { if (cfg) start(); });
+  document.addEventListener("wh:login", function () {
+    if (cfg) start();
+    if (linkLoaded) { linkLoaded = false; toast("已从链接载入同步配置，正在拉取云端数据…"); }
+  });
 })();
 </script>
 </body>
