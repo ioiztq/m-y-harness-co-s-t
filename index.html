@@ -1,0 +1,2209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2f5597">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f5597'/%3E%3Ctext x='16' y='23' font-size='19' font-family='Helvetica,Arial,sans-serif' font-weight='700' fill='%23ffffff' text-anchor='middle'%3E%C2%A5%3C/text%3E%3C/svg%3E">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>线束工序成本计算器</title>
+<style>
+:root{
+  --bg:#f4f6fa; --panel:#ffffff; --ink:#1f2937; --ink2:#4b5563; --muted:#8b95a5;
+  --line:#e5e9f0; --line2:#eef1f6;
+  --pri:#2f5597; --pri2:#4472c4; --priL:#eaf1fd; --priXL:#f5f9ff;
+  --hot:#c0392b; --hotL:#fdeeec; --warn:#b7791f; --warnL:#fdf6e3;
+  --ok:#2f855a; --okL:#e9f7ef;
+  --r:12px; --sh:0 1px 2px rgba(16,30,54,.06), 0 8px 24px -12px rgba(16,30,54,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif;
+  background:var(--bg); color:var(--ink); font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased; padding-bottom:48px;
+}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ---------- 顶栏 ---------- */
+header{
+  background:linear-gradient(120deg,#2f5597 0%,#3d6bb5 62%,#4472c4 100%);
+  color:#fff; padding:22px 28px 24px;
+}
+.hwrap{max-width:1240px;margin:0 auto;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+h1{font-size:20px;font-weight:650;letter-spacing:.3px}
+.sub{font-size:12.5px;color:rgba(255,255,255,.78);margin-top:3px}
+.hactions{margin-left:auto;display:flex;gap:8px}
+.btn{
+  border:1px solid rgba(255,255,255,.34); background:rgba(255,255,255,.12); color:#fff;
+  padding:7px 14px; border-radius:8px; font-size:12.5px; cursor:pointer;
+  font-family:inherit; transition:.16s; backdrop-filter:blur(4px);
+}
+.btn:hover{background:rgba(255,255,255,.24)}
+.btn.solid{background:#fff;color:var(--pri);border-color:#fff;font-weight:600}
+.btn.solid:hover{background:#eef3fc}
+.hsep{width:1px;height:20px;background:rgba(255,255,255,.28);align-self:center;margin:0 2px}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;bottom:30px;transform:translate(-50%,18px);
+  background:#1f2937;color:#fff;font-size:13px;line-height:1.6;padding:11px 20px;border-radius:10px;
+  box-shadow:0 14px 36px -10px rgba(0,0,0,.45);opacity:0;pointer-events:none;
+  transition:opacity .22s ease,transform .22s ease;z-index:99;max-width:min(92vw,640px);text-align:center;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast b{color:#ffd666;font-weight:600}
+
+/* ---------- 布局 ---------- */
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh)}
+.topbar{margin-top:-14px;position:relative;z-index:2;padding:14px 18px;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.2px}
+.field input{
+  border:1px solid var(--line); background:var(--priXL); border-radius:8px;
+  padding:7px 10px; font-size:13.5px; font-family:inherit; color:var(--ink);
+  font-variant-numeric:tabular-nums; transition:.15s; outline:none;
+}
+.field input:focus{border-color:var(--pri2);background:#fff;box-shadow:0 0 0 3px rgba(68,114,196,.13)}
+.field input.w120{width:200px} .field input.w90{width:96px} .field input.w70{width:74px}
+.derive{
+  margin-left:auto;display:flex;align-items:center;gap:10px;padding:8px 14px;
+  background:var(--priXL);border:1px dashed #c7d8f2;border-radius:9px;font-size:12.5px;color:var(--pri);
+}
+.derive b{font-size:15px;font-variant-numeric:tabular-nums}
+
+.main{display:grid;grid-template-columns:minmax(0,1fr) 322px;gap:16px;margin-top:16px;align-items:start}
+@media(max-width:1080px){.main{grid-template-columns:1fr}}
+
+/* ---------- 工序表 ---------- */
+.cardhead{display:flex;align-items:center;gap:10px;padding:14px 18px 12px;border-bottom:1px solid var(--line2)}
+.cardhead h2{font-size:14px;font-weight:650}
+.chip{font-size:11.5px;color:var(--muted);background:var(--bg);padding:2px 9px;border-radius:20px;border:1px solid var(--line)}
+.cardhead .mini{margin-left:auto;font-size:11.5px;color:var(--muted)}
+
+.tablescroll{overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;min-width:820px}
+thead th{
+  font-size:11.5px;font-weight:600;color:var(--muted);text-align:left;
+  padding:9px 10px;background:#fafbfd;border-bottom:1px solid var(--line);
+  white-space:nowrap;letter-spacing:.2px;
+}
+thead th:first-child{padding-left:18px}
+thead th:last-child{padding-right:18px}
+tbody td{padding:9px 10px;border-bottom:1px solid var(--line2);vertical-align:middle}
+tbody td:first-child{padding-left:18px}
+tbody td:last-child{padding-right:18px}
+tbody tr{transition:background .14s}
+tbody tr:hover{background:#fbfcfe}
+tbody tr.hot{background:var(--hotL);box-shadow:inset 3px 0 0 var(--hot)}
+tbody tr.hot:hover{background:#fce8e5}
+tbody tr.warnrow{background:var(--warnL);box-shadow:inset 3px 0 0 #e0b252}
+
+select,input.inp{
+  width:100%;border:1px solid var(--line);background:#fff;border-radius:7px;
+  padding:6px 8px;font-size:13px;font-family:inherit;color:var(--ink);
+  font-variant-numeric:tabular-nums;outline:none;transition:.15s;
+}
+select{appearance:none;background-image:url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238b95a5' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center;padding-right:24px;cursor:pointer}
+select:focus,input.inp:focus{border-color:var(--pri2);box-shadow:0 0 0 3px rgba(68,114,196,.12)}
+input.inp{text-align:right;background:var(--priXL)}
+input.inp:focus{background:#fff}
+input.inp::placeholder{color:#c8d0dc;font-weight:400}
+
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
+.badge.piece{background:var(--priL);color:var(--pri)}
+.badge.time{background:var(--warnL);color:var(--warn)}
+.badge.warnb{background:#fff4dc;color:#b7791f}
+
+.cell-main{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.cell-sub{font-size:10.5px;color:var(--muted);margin-top:1px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cost{font-size:14px;font-weight:700;color:var(--pri);font-variant-numeric:tabular-nums}
+tr.hot .cost{color:var(--hot)}
+
+.pbar{display:flex;align-items:center;gap:8px}
+.pbar .track{flex:1;height:7px;min-width:64px;background:#eef1f6;border-radius:4px;overflow:hidden;min-width:52px}
+.pbar .fill{height:100%;border-radius:4px;background:linear-gradient(90deg,#8fb0e0,#4472c4);transition:width .28s ease}
+tr.hot .pbar .fill{background:linear-gradient(90deg,#e8927c,#c0392b)}
+.pbar .pv{font-size:11.5px;color:var(--ink2);width:42px;text-align:right;font-variant-numeric:tabular-nums}
+
+.del{
+  border:none;background:transparent;color:#c3cad6;cursor:pointer;font-size:16px;
+  line-height:1;padding:4px 6px;border-radius:6px;transition:.14s;
+}
+.del:hover{background:#fdeeec;color:var(--hot)}
+
+.tfoot{display:flex;align-items:center;gap:10px;padding:12px 18px;background:#fafbfd;border-top:1px solid var(--line)}
+.addbtn{
+  border:1px dashed #b9cbe8;background:#fff;color:var(--pri);font-family:inherit;
+  font-size:12.5px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;transition:.15s;
+}
+.addbtn:hover{background:var(--priL);border-color:var(--pri2)}
+.tfoot .hint{font-size:11.5px;color:var(--muted);margin-left:auto}
+
+/* ---------- 右侧汇总 ---------- */
+aside{display:flex;flex-direction:column;gap:14px}
+.sum{padding:18px}
+.sum .lab{font-size:11.5px;color:var(--muted);font-weight:600;letter-spacing:.3px}
+.sum .big{font-size:38px;font-weight:700;color:var(--pri);letter-spacing:-1px;line-height:1.15;margin-top:2px;font-variant-numeric:tabular-nums}
+.sum .big small{font-size:15px;font-weight:600;color:var(--ink2);margin-left:4px;letter-spacing:0}
+.sum .row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-top:1px dashed var(--line);font-size:12.5px;color:var(--ink2)}
+.sum .row b{font-size:14px;color:var(--ink);font-variant-numeric:tabular-nums}
+.sum .row:first-of-type{margin-top:12px}
+
+.hotcard{padding:16px 18px;border:1px solid #f3cdc7;background:linear-gradient(180deg,#fff,#fef6f5)}
+.hotcard .top{display:flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;color:var(--hot);letter-spacing:.3px}
+.hotcard .dot{width:7px;height:7px;border-radius:50%;background:var(--hot);box-shadow:0 0 0 3px rgba(192,57,43,.14)}
+.hotcard .hname{font-size:22px;font-weight:700;color:var(--hot);margin:6px 0 2px;letter-spacing:-.3px}
+.hotcard .hmeta{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+.hotcard .hmeta b{color:var(--hot);font-size:14px}
+.hotcard .tip{font-size:11px;color:var(--muted);margin-top:9px;padding-top:9px;border-top:1px dashed #f3cdc7;line-height:1.55}
+
+.rank{padding:16px 18px}
+.rank h3{font-size:12.5px;font-weight:650;color:var(--ink2);margin-bottom:12px}
+.rline{display:grid;grid-template-columns:74px 1fr 58px;align-items:center;gap:9px;margin-bottom:9px;font-size:12px}
+.rline .rn{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rline .rt{display:block;height:10px;background:#e9eef6;border-radius:5px;overflow:hidden}
+.rline .rf{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#8fb0e0,#3a67b5);transition:width .3s ease}
+.rline.top .rn{color:var(--hot);font-weight:700}
+.rline.top .rf{background:linear-gradient(90deg,#e8927c,#c0392b)}
+.rline .rv{text-align:right;color:var(--ink);font-variant-numeric:tabular-nums;font-weight:600}
+
+/* ---------- 字典 ---------- */
+.dict{margin-top:16px}
+.dict table{min-width:760px}
+.dict thead th{background:#fafbfd}
+.dict td{padding:7px 10px}
+.dict input.inp.tiny{text-align:center;padding:5px 6px;font-size:12.5px}
+.dict .warn-tag{font-size:10.5px;color:var(--hot)}
+
+footer{max-width:1240px;margin:22px auto 0;padding:0 22px;font-size:11.5px;color:var(--muted);line-height:1.7}
+footer b{color:var(--ink2)}
+
+@page{size:A4 landscape;margin:10mm}
+@media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+  body{background:#fff;padding:0;font-size:11px}
+  header{background:#fff!important;color:#1f2937!important;padding:0 0 6px!important;border-bottom:2.5pt solid #2f5597}
+  h1{font-size:15pt!important;color:#1f3864!important;letter-spacing:0}
+  .sub{color:#666!important;font-size:8.5pt!important}
+  .hactions,.hsep,.toast{display:none!important}
+  .wrap{padding:0}
+  .topbar{margin-top:8px!important;box-shadow:none!important;border:none!important;border-bottom:1px solid #dde3ec!important;border-radius:0!important;padding:0 0 8px!important;gap:16px!important}
+  .field label{color:#8b95a5!important;font-size:7.5pt!important}
+  .field input{border:none!important;background:#f4f7fc!important;padding:2px 5px!important;font-size:10.5pt!important;font-weight:700!important;color:#1f3864!important}
+  .derive{border:none!important;background:transparent!important;color:#2f5597!important;padding:0!important;font-size:8.5pt!important}
+  .main{grid-template-columns:1fr!important;gap:8px!important;margin-top:8px!important}
+  aside{display:grid!important;grid-template-columns:1.1fr 1fr!important;gap:8px!important}
+  aside .rank{display:none!important}
+  .panel{box-shadow:none!important;border:1px solid #dfe5ee!important;border-radius:6px!important;break-inside:avoid}
+  .sum{padding:10px 12px!important}
+  .sum .big{font-size:21pt!important;margin-top:0!important}
+  .sum .row{padding:4px 0!important;font-size:8.5pt!important}
+  .sum .row b{font-size:9.5pt!important}
+  .hotcard{padding:10px 12px!important}
+  .hotcard .hname{font-size:14pt!important;margin:3px 0 1px!important}
+  .hotcard .tip{display:none!important}
+  .hotcard .hmeta{font-size:8.5pt!important}
+  .cardhead{padding:7px 10px 6px!important}
+  .cardhead .mini{display:none!important}
+  .cardhead h2{font-size:10pt!important}
+  .chip{font-size:7.5pt!important;padding:1px 6px!important}
+  table{min-width:0!important;font-size:8.5pt}
+  thead th{font-size:7.5pt!important;padding:5px 5px!important;color:#fff!important;background:#4472c4!important}
+  tbody td{padding:4px 5px!important}
+  tbody tr.hot{background:#fff5f4!important}
+  .cell-main{font-size:8.5pt!important}
+  .cell-sub{font-size:7pt!important;color:#8b95a5!important}
+  .cost{font-size:8.5pt!important}
+  select{border:none!important;background:transparent!important;background-image:none!important;appearance:none!important;-webkit-appearance:none;padding:0!important;font-size:8.5pt!important;font-weight:600}
+  input.inp{border:none!important;background:transparent!important;padding:0!important;font-size:8.5pt!important}
+  .badge{font-size:7pt!important;padding:1px 5px!important;border:1px solid #cfdaea}
+  .pbar .pv{font-size:7pt!important;width:34px!important}
+  .pbar .track{height:5px!important}
+  .tfoot,.addbtn,.del,.dict{display:none!important}
+  footer{margin-top:8px!important;color:#666!important;font-size:7pt!important;border-top:1px solid #dde3ec;padding-top:6px;line-height:1.6}
+}
+
+/* ===== 登录门禁 ===== */
+#app[hidden]{display:none!important}
+.gate{
+  position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:24px;
+  background:radial-gradient(1100px 560px at 50% -12%,#3d6bb5 0%,#2f5597 46%,#1f3864 100%);
+}
+.gate.on{display:flex}
+.gate-card{
+  width:100%;max-width:382px;background:#fff;border-radius:16px;padding:34px 30px 22px;
+  box-shadow:0 30px 70px -20px rgba(0,0,0,.55);text-align:center;
+}
+.gate-ico{
+  width:52px;height:52px;margin:0 auto 14px;border-radius:14px;
+  background:linear-gradient(135deg,#4472c4,#2f5597);display:flex;align-items:center;justify-content:center;
+  box-shadow:0 8px 18px -6px rgba(47,85,151,.6);
+}
+.gate-ico svg{width:26px;height:26px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.gate-card h2{font-size:17px;font-weight:650;color:#1f3864;letter-spacing:.2px}
+.gate-sub{font-size:12px;color:#8b95a5;margin:5px 0 22px}
+.gfield{display:block;text-align:left;margin-bottom:13px}
+.gfield span{display:block;font-size:11.5px;color:#8b95a5;font-weight:600;margin-bottom:5px}
+.gfield input{
+  width:100%;border:1px solid #dfe5ee;background:#f7f9fd;border-radius:9px;
+  padding:10px 12px;font-size:14px;font-family:inherit;color:#1f2937;outline:none;transition:.16s;
+  font-variant-numeric:tabular-nums;letter-spacing:.5px;
+}
+.gfield input:focus{border-color:#4472c4;background:#fff;box-shadow:0 0 0 3px rgba(68,114,196,.14)}
+.gerr{min-height:18px;font-size:12px;color:#c0392b;text-align:left;margin:2px 0 10px;line-height:1.5}
+.gbtn{
+  width:100%;border:none;border-radius:9px;padding:11px;font-size:14px;font-weight:600;font-family:inherit;
+  color:#fff;background:linear-gradient(135deg,#4472c4,#2f5597);cursor:pointer;transition:.16s;
+  box-shadow:0 8px 20px -8px rgba(47,85,151,.8);letter-spacing:3px;
+}
+.gbtn:hover{filter:brightness(1.06)}
+.gbtn:disabled{opacity:.55;cursor:not-allowed;filter:none}
+.gate-foot{font-size:11px;color:#a3adbd;margin-top:16px}
+.linkbtn{border:none;background:none;color:#4472c4;font-size:11px;font-family:inherit;cursor:pointer;padding:0;text-decoration:underline}
+.shake{animation:shake .34s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+
+/* ===== 安全说明弹层 ===== */
+.modal{position:fixed;inset:0;z-index:300;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(15,25,45,.55)}
+.modal.on{display:flex}
+.modal-card{width:100%;max-width:580px;background:#fff;border-radius:14px;padding:24px 26px;box-shadow:0 24px 60px -18px rgba(0,0,0,.5);max-height:86vh;overflow:auto}
+.modal-card h3{font-size:15px;color:#1f3864;margin-bottom:4px}
+.modal-card .mhint{font-size:11.5px;color:#8b95a5;margin-bottom:16px}
+.modal-card ul{list-style:none}
+.modal-card li{position:relative;padding-left:18px;font-size:12.5px;color:#374151;line-height:1.75;margin-bottom:9px}
+.modal-card li::before{content:"";position:absolute;left:2px;top:9px;width:6px;height:6px;border-radius:50%;background:#4472c4}
+.modal-card li.warnli::before{background:#c0392b}
+.modal-card li b{color:#1f3864}
+.modal-card code{background:#f2f5fa;border-radius:4px;padding:1px 5px;font-size:11.5px;color:#1f3864}
+.modal-card .close-row{display:flex;justify-content:flex-end;margin-top:16px}
+.mbtn{border:none;background:#2f5597;color:#fff;font-family:inherit;font-size:13px;font-weight:600;padding:9px 20px;border-radius:8px;cursor:pointer}
+.mbtn:hover{background:#3a67b5}
+@media print{.gate,.modal{display:none!important}}
+
+/* ===== 手机底部常驻总价条（桌面不显示） ===== */
+.mbar{display:none}.mbar .mb1{display:flex;flex-direction:column;line-height:1.25;flex:0 0 auto}
+.mbar .mb1 span{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.3px}
+.mbar .mb1 b{font-size:20px;font-weight:700;color:var(--pri);font-variant-numeric:tabular-nums;letter-spacing:-.4px}
+.mbar .mb2{margin-left:auto;min-width:0;text-align:right;display:flex;flex-direction:column;line-height:1.35}
+.mbar .mb2 span{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.3px}
+.mbar .mb2 b{font-size:12.5px;font-weight:700;color:var(--hot);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52vw}
+
+/* ===== 字典折叠（窄屏显示按钮） ===== */
+.tgl{
+  display:none;border:1px solid #cfdaea;background:#fff;color:var(--pri);font-family:inherit;
+  font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:20px;cursor:pointer;white-space:nowrap;
+}
+.tgl:hover{background:var(--priL);border-color:var(--pri2)}
+.dict.collapsed .tablescroll,.dict.collapsed .tfoot{display:none}
+
+
+/* ===== 手机 / 窄屏适配（不影响打印） ===== */
+@media screen and (max-width:760px){
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+  body{padding-bottom:78px;font-size:13.5px}
+  .wrap{padding:0 12px}
+  header{padding:16px 14px 20px}
+  h1{font-size:17px;line-height:1.35}
+  .sub{font-size:11.5px;margin-top:4px;line-height:1.5}
+  .hactions{width:100%;margin-left:0;flex-wrap:wrap;gap:6px;justify-content:center}
+  .hactions .hsep{display:none}
+  .hactions .btn{flex:1 1 calc(33.333% - 6px);max-width:calc(33.333% - 6px);min-width:0;min-height:38px;padding:8px 2px;font-size:11.5px;border-radius:7px;white-space:nowrap}
+  .topbar{margin-top:-10px;padding:12px;gap:10px}
+  .topbar .field:first-child{flex:1 1 100%}
+  .field{flex:1 1 calc(50% - 5px);min-width:0}
+  .field input,.field input.w120,.field input.w90,.field input.w70{width:100%}
+  .field input{font-size:16px;padding:8px 10px}
+  .derive{width:100%;margin-left:0;justify-content:space-between;padding:8px 12px;font-size:12px}
+  .main{margin-top:12px;gap:12px}
+  .cardhead{padding:12px 12px 10px;flex-wrap:wrap;gap:7px}
+  .cardhead .mini{display:none}
+  .tgl{display:inline-block;margin-left:auto;min-height:32px;padding:6px 14px;font-size:12px}
+  .sum{padding:14px}
+  .sum .big{font-size:30px}
+  .sum .row{padding:8px 0;font-size:12.5px}
+  .hotcard{padding:14px}
+  .hotcard .hname{font-size:20px}
+  .rank{padding:14px}
+  footer{padding:0 14px;font-size:11px;margin-top:16px}
+
+  /* —— 表格转卡片 —— */
+  .tablescroll{overflow:visible}
+  .main .tablescroll table,.dict table{min-width:0;display:block;width:100%}
+  .main .tablescroll thead,.dict thead{display:none}
+  .main .tablescroll tbody,.dict tbody{display:block}
+  .main .tablescroll tbody tr,.dict tbody tr{
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px 10px;padding:11px 12px 12px;border-bottom:1px solid var(--line);
+    border-left:3px solid transparent;
+  }
+  .main .tablescroll tbody tr.hot{border-left-color:var(--hot);box-shadow:none}
+  .main .tablescroll tbody tr.warnrow{border-left-color:#e0b252;box-shadow:none}
+  .main .tablescroll tbody td,.dict tbody td{display:block;padding:0!important;border:none;min-width:0}
+  .main .tablescroll tbody td[data-lb]::before,.dict tbody td[data-lb]::before{
+    content:attr(data-lb);display:block;font-size:10.5px;color:var(--muted);font-weight:600;
+    margin-bottom:4px;letter-spacing:.2px;
+  }
+  .main .tablescroll tbody td[colspan]{grid-column:1/-1;text-align:center}
+  .main .tablescroll select,.main .tablescroll input.inp,
+  .dict select,.dict input.inp{font-size:16px;min-height:38px;padding:7px 9px}
+  .main .tablescroll select{background-position:right 8px center;padding-right:26px}
+  .main .tablescroll .cost{font-size:16px}
+  .main .tablescroll .cell-sub{white-space:normal;font-size:10px;line-height:1.4}
+  .main .tablescroll td:nth-child(1){grid-column:1/-1;order:1}
+  .main .tablescroll td:nth-child(2){order:2;align-self:center}
+  .main .tablescroll td:nth-child(3){grid-column:1/-1;order:4}
+  .main .tablescroll td:nth-child(4){order:5}
+  .main .tablescroll td:nth-child(5){order:6}
+  .main .tablescroll td:nth-child(6){order:7}
+  .main .tablescroll td:nth-child(7){order:8}
+  .main .tablescroll td:nth-child(8){order:3;justify-self:end;align-self:center}
+  .main .tablescroll .pbar .track{min-width:0}
+  .dict tbody td:nth-child(1){grid-column:1/-1;order:1}
+  .dict tbody td:nth-child(2){order:2}
+  .dict tbody td:nth-child(3){order:4}
+  .dict tbody td:nth-child(4){order:5}
+  .dict tbody td:nth-child(5){order:6}
+  .dict tbody td:nth-child(6){order:7}
+  .dict tbody td:nth-child(7){grid-column:1/-1;order:8}
+  .dict tbody td:nth-child(8){order:3;justify-self:end;align-self:center}
+  .dict input.inp.tiny{text-align:left;font-size:16px;min-height:38px}
+  .dict .cell-main{font-size:14px}
+  .del{font-size:20px;line-height:1;padding:4px 10px;min-height:34px;color:#b8c0cd}
+  .tfoot{flex-wrap:wrap;padding:11px 12px;gap:8px}
+  .tfoot .hint{flex:1 1 100%;margin-left:0;font-size:11px;line-height:1.55}
+  .addbtn{flex:1 1 100%;min-height:42px;font-size:13px}
+
+  /* —— 底部总价条 —— */
+  .mbar{
+    display:flex;align-items:center;gap:12px;position:fixed;left:0;right:0;bottom:0;z-index:60;
+    padding:8px 14px calc(8px + env(safe-area-inset-bottom));
+    background:rgba(255,255,255,.97);border-top:1px solid var(--line);
+    box-shadow:0 -8px 24px -14px rgba(16,30,54,.45);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+  }
+  .toast{bottom:86px;font-size:12.5px;padding:10px 16px}
+
+  /* —— 登录 / 弹层 —— */
+  .gate{padding:16px}
+  .gate-card{padding:26px 20px 18px;border-radius:14px;max-width:400px}
+  .gate-ico{width:46px;height:46px;border-radius:13px;margin-bottom:12px}
+  .gfield input{font-size:16px;padding:11px 12px}
+  .gbtn{min-height:46px;font-size:15px}
+  .modal{padding:14px}
+  .modal-card{padding:20px 18px;max-height:88vh;border-radius:12px}
+  .modal-card li{font-size:12px;line-height:1.7}
+}
+@media screen and (max-width:380px){
+  .hactions .btn{flex:1 1 calc(50% - 6px)}
+  h1{font-size:16px}
+  .main .tablescroll tbody tr,.dict tbody tr{gap:8px}
+}
+</style>
+</head>
+<body>
+<div id="gate" class="gate">
+  <div class="gate-card" id="gateCard">
+    <div class="gate-ico">
+      <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1.2"/></svg>
+    </div>
+    <h2>线束工序成本计算器</h2>
+    <div class="gate-sub">请填写账号与密码后使用</div>
+    <form id="loginForm" autocomplete="off" novalidate>
+      <label class="gfield"><span>账号</span>
+        <input id="gUser" type="text" inputmode="numeric" maxlength="32" autocomplete="off" spellcheck="false" placeholder="请输入账号">
+      </label>
+      <label class="gfield"><span>密码</span>
+        <input id="gPass" type="password" maxlength="64" autocomplete="off" placeholder="请输入密码">
+      </label>
+      <div class="gerr" id="gErr"></div>
+      <button type="submit" class="gbtn" id="gBtn">登 录</button>
+    </form>
+    <div class="gate-foot">本工具全程离线运行，数据不出本机 · <button type="button" class="linkbtn" id="secLink">安全说明</button></div>
+  </div>
+</div>
+<div id="app" hidden>
+
+<header>
+  <div class="hwrap">
+    <div>
+      <h1>线束工序加工成本计算器</h1>
+      <div class="sub">选工序 · 填用量 · 自动匹配单价并汇总，标出成本最高的工序</div>
+    </div>
+    <div class="hactions">
+      <button class="btn" id="secBtn">安全说明</button>
+      <button class="btn" id="resetBtn">恢复示例</button>
+      <span class="hsep"></span>
+      <button class="btn solid" id="expXlsx">导出 Excel</button>
+      <button class="btn" id="expDocx">导出 Word</button>
+      <button class="btn" id="expPdf">导出 PDF</button>
+      <button class="btn" id="printBtn">打印</button>
+      <span class="hsep"></span>
+      <button class="btn" id="logoutBtn">退出</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- 参数区 -->
+  <div class="panel topbar">
+    <div class="field">
+      <label>产品型号</label>
+      <input class="w120" id="pName" maxlength="60" value="HX-2401 发动机线束总成">
+    </div>
+    <div class="field">
+      <label>批量（套）</label>
+      <input class="w90 num" id="pBatch" type="number" min="0" step="1" value="1000">
+    </div>
+    <div class="field">
+      <label>默认员工日工资（元）</label>
+      <input class="w90 num" id="pWage" type="number" min="0" step="10" value="220">
+    </div>
+    <div class="field">
+      <label>每日工作（小时）</label>
+      <input class="w70 num" id="pHours" type="number" min="1" max="24" step="0.5" value="8">
+    </div>
+    <div class="field">
+      <label>有效工时系数</label>
+      <input class="w70 num" id="pEff" type="number" min="0.1" max="1" step="0.01" value="0.85">
+    </div>
+    <div class="derive">
+      日有效工时 <b id="dSec">24,480</b> 秒
+    </div>
+  </div>
+
+  <div class="main">
+    <!-- 左：工序清单 -->
+    <div class="panel">
+      <div class="cardhead">
+        <h2>工序清单</h2>
+        <span class="chip" id="rowCount">0 道工序</span>
+        <span class="mini">蓝底可填；日工资留空即用默认值</span>
+      </div>
+      <div class="tablescroll">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:130px">工序</th>
+              <th style="width:86px">计价方式</th>
+              <th style="width:112px">单价（元）</th>
+              <th style="width:92px">单套用量</th>
+              <th style="width:104px">日工资（元）</th>
+              <th style="width:110px">工序成本（元）</th>
+              <th style="width:162px">占单套成本</th>
+              <th style="width:44px"></th>
+            </tr>
+          </thead>
+          <tbody id="grid"></tbody>
+        </table>
+      </div>
+      <div class="tfoot">
+        <button class="addbtn" id="addBtn">＋ 添加工序</button>
+        <span class="hint">单套用量 = 每套成品需要的根 / 个 / 点 / 处数量</span>
+      </div>
+    </div>
+
+    <!-- 右：结果 -->
+    <aside>
+      <div class="panel sum">
+        <div class="lab">单套加工成本</div>
+        <div class="big" id="totalCost">¥0.00<small>/套</small></div>
+        <div class="row"><span>批次总成本</span><b id="batchCost">¥0.00</b></div>
+        <div class="row"><span>工序数量</span><b id="procCount">0 道</b></div>
+        <div class="row"><span>单套用量合计</span><b id="qtySum">0</b></div>
+      </div>
+
+      <div class="panel hotcard" id="hotCard">
+        <div class="top"><span class="dot"></span>成本最高工序</div>
+        <div class="hname" id="hotName">—</div>
+        <div class="hmeta">成本 <b id="hotCost">¥0.00</b> ／ 占 <b id="hotPct">0%</b></div>
+        <div class="tip">降本优先级从这里开始：占比越高，改工艺 / 上自动化 / 换工位 / 议价的收益越大。</div>
+      </div>
+
+      <div class="panel rank">
+        <h3>工序成本排行</h3>
+        <div id="rank"></div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 工序单价字典 -->
+  <div class="panel dict">
+    <div class="cardhead">
+      <h2>工序单价字典</h2>
+      <span class="chip">改这里，上面的表自动跟着变</span>
+      <span class="mini">计价方式选「按工时」时无需填单价，用「日工资 ÷ 日产量」折算</span>
+      <button type="button" class="tgl" id="dictTgl" aria-expanded="true" aria-controls="dictBody">收起</button>
+    </div>
+    <div class="tablescroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:170px">工序名称</th>
+            <th style="width:118px">工序类别</th>
+            <th style="width:126px">计价方式</th>
+            <th style="width:120px">工序单价（元）</th>
+            <th style="width:96px">计量单位</th>
+            <th style="width:126px">工时定额（秒/件）</th>
+            <th style="width:120px">折算人工成本</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dictBody"></tbody>
+      </table>
+    </div>
+    <div class="tfoot">
+      <button class="addbtn" id="addDictBtn">＋ 新增工序</button>
+      <span class="hint">「折算人工成本」= 默认日工资 ÷（日有效工时 ÷ 工时定额），用于对比计件价是否合理</span>
+    </div>
+  </div>
+
+  <footer>
+    <b>计价规则：</b>计件工序 → 工序成本 = 单套用量 × 字典单价；按工时工序（无单价）→ 日产量 = 日有效工时 ÷ 工时定额，折算单价 = 日工资 ÷ 日产量，工序成本 = 单套用量 × 折算单价。<br>
+    <b>口径说明：</b>本工具只核算加工工时成本，不含线材、端子等材料费，也不含设备折旧、返工与制造费用分摊，报价时需另行加计。示例单价为行业参考值，请替换为本厂实际工价后使用。
+  </footer>
+</div>
+
+<div class="mbar" id="mbar">
+  <div class="mb1"><span>单套加工成本</span><b id="mTotal">¥0.00</b></div>
+  <div class="mb2"><span>成本最高工序</span><b id="mHot">—</b></div>
+</div>
+
+</div>
+
+<div class="modal" id="secModal">
+  <div class="modal-card">
+    <h3>安全说明</h3>
+    <div class="mhint">本工具是单个本地网页文件，以下每一条你都可以自己验证</div>
+    <ul>
+      <li><b>全程离线</b>：页面不发起任何网络请求，不加载任何外部脚本、字体、图片或统计代码。断网状态下同样可以完整使用。验证方法：按 F12 打开开发者工具 → Network 面板 → 操作一遍页面，只会看到本机文件，没有任何外部请求。</li>
+      <li><b>数据不出本机</b>：你填写的工序、单价、用量只保存在自己浏览器的本地存储（localStorage）里，不会上传到任何服务器，也没有服务器可上传。</li>
+      <li><b>导出文件不含宏</b>：导出的 .xlsx / .docx 是纯数据 OOXML 包，没有任何 VBA 宏或可执行代码；.pdf 为图像页。这三种格式本身不是可执行文件，双击只会被 Excel / Word / PDF 阅读器打开。</li>
+      <li><b>无任何安装行为</b>：这是 .html 文件，不是 .exe / .msi，双击仅由浏览器打开，不写注册表、不装服务、不修改系统设置。</li>
+      <li><b>输入已做转义</b>：所有自定义名称（工序名、型号等）在渲染和导出时都做了 HTML / XML 转义，不会被当作代码执行；导出的表格单元格按纯文本写入，不会被 Excel 当成公式运算。</li>
+      <li class="warnli"><b>关于登录口令（请务必了解）</b>：口令是在你本机浏览器里校验的，用途是挡住无关人员随手打开，<b>不等于密码学意义上的加密保护</b>——文件在你手上，懂技术的人仍可绕过。因此请不要把本文件放到公网或共享盘，也不要连同口令一起转发。</li>
+      <li class="warnli"><b>来源校验</b>：如果这个文件是别人转发给你的，请确认来源可信。文件是否被人改动过，可用系统自带命令 <code>certutil -hashfile 文件名 SHA256</code> 计算哈希，与来源方提供的值比对。</li>
+    </ul>
+    <div class="close-row"><button class="mbtn" id="secClose">知道了</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const LS = "wh-cost-calc-v1";
+  const $ = id => document.getElementById(id);
+  const money = n => "¥" + (isFinite(n) ? n : 0).toFixed(2);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const nf = n => (isFinite(n) ? n : 0).toLocaleString('zh-CN');
+
+  /* ---------- 初始数据 ---------- */
+  const DEF_DICT = [
+    {name:"裁线",     cat:"前段加工", mode:"piece", price:0.060, unit:"元/根", secs:6},
+    {name:"浸锡",     cat:"前段加工", mode:"piece", price:0.100, unit:"元/点", secs:8},
+    {name:"打端子",   cat:"压接工序", mode:"piece", price:0.120, unit:"元/个", secs:10},
+    {name:"包胶布",   cat:"后段加工", mode:"piece", price:0.150, unit:"元/处", secs:12},
+    {name:"绕磁环",   cat:"装配工序", mode:"piece", price:0.350, unit:"元/个", secs:25},
+    {name:"穿护套",   cat:"后段加工", mode:"piece", price:0.200, unit:"元/根", secs:15},
+    {name:"烤套管",   cat:"后段加工", mode:"piece", price:0.180, unit:"元/处", secs:18},
+    {name:"焊接",     cat:"装配工序", mode:"piece", price:0.220, unit:"元/点", secs:20},
+    {name:"手工组装", cat:"装配工序", mode:"time",  price:null,  unit:"元/件", secs:35}
+  ];
+  const DEF_ROWS = [
+    {name:"裁线", qty:8,  wage:""}, {name:"浸锡", qty:16, wage:""},
+    {name:"打端子", qty:16, wage:""}, {name:"包胶布", qty:6, wage:""},
+    {name:"绕磁环", qty:2, wage:""}, {name:"穿护套", qty:4, wage:""},
+    {name:"烤套管", qty:6, wage:""}, {name:"焊接", qty:8, wage:""},
+    {name:"手工组装", qty:1, wage:""}
+  ];
+  const DEF_PARAMS = {name:"HX-2401 发动机线束总成", batch:1000, wage:220, hours:8, eff:0.85};
+
+  let state = {
+    params: Object.assign({}, DEF_PARAMS),
+    dict: JSON.parse(JSON.stringify(DEF_DICT)),
+    rows: JSON.parse(JSON.stringify(DEF_ROWS))
+  };
+
+  /* 数值归一：非数字回退默认值，超范围截断（防止被塞入异常值撑爆布局 / 导出） */
+  function clampNum(v, min, max, def){
+    var n = Number(v);
+    if(!isFinite(n)) return def;
+    if(n < min) return min;
+    if(n > max) return max;
+    return n;
+  }
+  function safeStr(v, maxLen, def){
+    var t = (v == null) ? "" : String(v);
+    t = t.replace(/[\u0000-\u001f\u007f]/g, "");
+    t = t.slice(0, maxLen);
+    return t.length ? t : def;
+  }
+
+  /* 从 localStorage 读回的数据一律视为不可信，逐字段重建，只保留白名单结构 */
+  function sanitize(o){
+    if(!o || typeof o !== "object") return null;
+    var p = (o.params && typeof o.params === "object") ? o.params : {};
+    var out = {
+      params: {
+        name: safeStr(p.name, 60, "线束产品"),
+        batch: clampNum(p.batch, 0, 100000000, 1000),
+        wage: clampNum(p.wage, 0, 10000000, 220),
+        hours: clampNum(p.hours, 0.5, 24, 8),
+        eff: clampNum(p.eff, 0.05, 1, 0.85)
+      },
+      dict: [],
+      rows: []
+    };
+    if(Array.isArray(o.dict)){
+      o.dict.slice(0, 200).forEach(function(d){
+        if(!d || typeof d !== "object") return;
+        var nm = safeStr(d.name, 40, "");
+        if(!nm) return;
+        out.dict.push({
+          name: nm,
+          cat: safeStr(d.cat, 20, "其他"),
+          mode: d.mode === "time" ? "time" : "piece",
+          price: (d.price == null || d.price === "") ? null : clampNum(d.price, 0, 10000000, 0),
+          unit: safeStr(d.unit, 12, "元/件"),
+          secs: clampNum(d.secs, 0, 86400, 10)
+        });
+      });
+    }
+    if(Array.isArray(o.rows)){
+      o.rows.slice(0, 200).forEach(function(r){
+        if(!r || typeof r !== "object") return;
+        out.rows.push({
+          name: safeStr(r.name, 40, ""),
+          qty: (r.qty === "" || r.qty == null) ? "" : clampNum(r.qty, 0, 1000000, 0),
+          wage: (r.wage === "" || r.wage == null) ? "" : clampNum(r.wage, 0, 10000000, 0)
+        });
+      });
+    }
+    return out;
+  }
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(LS);
+      if(!raw) return;
+      var clean = sanitize(JSON.parse(raw));
+      if(clean) state = clean;
+    }catch(e){}
+  }
+  function save(){ try{ localStorage.setItem(LS, JSON.stringify(state)); }catch(e){} }
+
+  /* ---------- 计算 ---------- */
+  function dailySecs(){ return Math.max(1, (Number(state.params.hours)||0) * 3600 * (Number(state.params.eff)||0)); }
+
+  function calc(){
+    const ds = dailySecs();
+    const rows = state.rows.map((r, i) => {
+      const d = state.dict.find(x => x.name === r.name) || null;
+      const qty = Number(r.qty) || 0;
+      const wageRaw = (r.wage === "" || r.wage === null || r.wage === undefined) ? null : Number(r.wage);
+      const wage = (wageRaw === null || isNaN(wageRaw)) ? (Number(state.params.wage)||0) : wageRaw;
+      let unit = 0, mode = "—", dailyOut = 0, note = "工序已不在字典中", cls = "";
+      if(d){
+        mode = d.mode;
+        dailyOut = d.secs > 0 ? ds / d.secs : 0;
+        if(d.mode === "piece"){
+          unit = Number(d.price) || 0;
+          if(unit > 0){
+            cls = "piece";
+            note = unit.toFixed(3) + " " + d.unit + "（字典价）";
+          }else{
+            cls = "missing";
+            note = "字典未填单价 · 待定价";
+          }
+        }else{
+          unit = dailyOut > 0 ? wage / dailyOut : 0;
+          cls = "time";
+          note = nf(wage) + " ÷ " + nf(Math.round(dailyOut)) + " 件/日 = " + unit.toFixed(3) + " 元";
+        }
+      }
+      return {i, name:r.name, d, qty, wage, unit, cost: qty * unit, mode, dailyOut, note, cls};
+    });
+    const total = rows.reduce((s, x) => s + x.cost, 0);
+    const maxCost = rows.reduce((m, x) => Math.max(m, x.cost), 0);
+    const positives = rows.filter(x => x.cost > 0);
+    const hotIdx = (maxCost > 0 && positives.length > 1) ? rows.findIndex(x => x.cost === maxCost) : -1;
+    return {rows, total, maxCost, hotIdx, valid: rows.filter(x => x.d).length};
+  }
+
+  /* ---------- 片段生成 ---------- */
+  function rowBadge(x){
+    if(x.cls === "missing") return '<span class="badge warnb">待定价</span>';
+    if(x.mode === "piece") return '<span class="badge piece">计件单价</span>';
+    if(x.mode === "time") return '<span class="badge time">按工时</span>';
+    return '<span class="badge time">未匹配</span>';
+  }
+  function rowUnitHtml(x){
+    const main = x.cls === "missing" ? '<span style="color:#b7791f;font-size:12.5px">待定价</span>' : x.unit.toFixed(3);
+    return '<div class="cell-main">' + main + '</div><div class="cell-sub">' + esc(x.note) + '</div>';
+  }
+  function pbarHtml(pct){
+    const w = Math.max(0, Math.min(1, pct)) * 100;
+    return '<div class="pbar"><div class="track"><div class="fill" style="width:' + w.toFixed(1) + '%"></div></div>'
+         + '<span class="pv">' + w.toFixed(1) + '%</span></div>';
+  }
+
+  /* ---------- 渲染：工序清单 ---------- */
+  function renderGrid(res){
+    const body = $("grid");
+    if(!res.rows.length){
+      body.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#8b95a5;padding:30px">'
+        + '还没有工序，点下方「＋ 添加工序」开始</td></tr>';
+    }else{
+      body.innerHTML = res.rows.map((x, idx) => {
+        const opts = '<option value="">— 选择工序 —</option>' + state.dict.map(d =>
+          '<option value="' + esc(d.name) + '"' + (d.name === x.name ? " selected" : "") + '>' + esc(d.name) + '</option>').join("");
+        const pct = res.total > 0 ? x.cost / res.total : 0;
+        return '<tr data-row="' + idx + '" class="' + (idx === res.hotIdx ? "hot" : "") + (x.cls === "missing" ? " warnrow" : "") + '">'
+          + '<td data-lb="工序"><select data-i="' + idx + '" data-k="name">' + opts + '</select></td>'
+          + '<td>' + rowBadge(x) + '</td>'
+          + '<td data-lb="单价（元）">' + rowUnitHtml(x) + '</td>'
+          + '<td data-lb="单套用量"><input class="inp" type="number" min="0" max="1000000" step="1" value="' + x.qty + '" data-i="' + idx + '" data-k="qty"></td>'
+          + '<td data-lb="日工资（元）"><input class="inp" type="number" min="0" max="10000000" step="10" value="' + (x.wage === "" ? "" : x.wage) + '" placeholder="' + state.params.wage + '" data-i="' + idx + '" data-k="wage" title="留空即用默认日工资"></td>'
+          + '<td data-lb="工序成本（元）"><span class="cost">' + x.cost.toFixed(2) + '</span></td>'
+          + '<td data-lb="占单套成本">' + pbarHtml(pct) + '</td>'
+          + '<td><button class="del" data-del="' + idx + '" title="删除该行">×</button></td>'
+          + '</tr>';
+      }).join("");
+    }
+    $("rowCount").textContent = res.rows.length + " 道工序";
+  }
+
+  // 只刷新数值，不动输入框（避免失焦）
+  function patchGrid(res){
+    res.rows.forEach((x, idx) => {
+      const tr = $("grid").querySelector('tr[data-row="' + idx + '"]');
+      if(!tr) return;
+      tr.classList.toggle("hot", idx === res.hotIdx);
+      tr.classList.toggle("warnrow", x.cls === "missing");
+      const td = tr.children;
+      td[1].innerHTML = rowBadge(x);
+      td[2].innerHTML = rowUnitHtml(x);
+      td[5].innerHTML = '<span class="cost">' + x.cost.toFixed(2) + '</span>';
+      td[6].innerHTML = pbarHtml(res.total > 0 ? x.cost / res.total : 0);
+    });
+  }
+
+  /* ---------- 渲染：汇总 ---------- */
+  function renderSummary(res){
+    $("totalCost").innerHTML = money(res.total) + "<small>/套</small>";
+    $("batchCost").textContent = money(res.total * (Number(state.params.batch) || 0));
+    $("procCount").textContent = res.valid + " 道";
+    $("qtySum").textContent = nf(res.rows.reduce((s, x) => s + (Number(x.qty) || 0), 0));
+
+    const hot = res.hotIdx >= 0 ? res.rows[res.hotIdx] : null;
+    const one = res.rows.find(x => x.cost > 0);
+    $("hotName").textContent = hot ? hot.name : (one ? one.name : "—");
+    $("hotCost").textContent = money(hot ? hot.cost : res.maxCost);
+    $("hotPct").textContent = res.total > 0 ? ((res.maxCost / res.total) * 100).toFixed(1) + "%" : "0%";
+
+    $("mTotal").textContent = money(res.total);
+    $("mHot").textContent = (hot || one)
+      ? (hot ? hot.name : one.name) + " " + money(hot ? hot.cost : one.cost)
+      : "—";
+
+    const list = res.rows.filter(x => x.cost > 0).sort((a, b) => b.cost - a.cost);
+    const max = list.length ? list[0].cost : 0;
+    $("rank").innerHTML = list.length ? list.map((x, i) =>
+      '<div class="rline ' + (i === 0 ? "top" : "") + '">'
+      + '<span class="rn" title="' + esc(x.name) + '">' + esc(x.name) + '</span>'
+      + '<span class="rt"><span class="rf" style="width:' + (max > 0 ? (x.cost / max * 100).toFixed(1) : 0) + '%"></span></span>'
+      + '<span class="rv">' + x.cost.toFixed(2) + '</span></div>'
+    ).join("") : '<div style="font-size:12px;color:#8b95a5">暂无数据</div>';
+  }
+
+  /* ---------- 渲染：字典 ---------- */
+  function convHtml(d){
+    const ds = dailySecs();
+    const dailyOut = d.secs > 0 ? ds / d.secs : 0;
+    const conv = dailyOut > 0 ? (Number(state.params.wage) || 0) / dailyOut : 0;
+    let sub = "折算参考价";
+    if(d.mode === "time"){
+      sub = "按工时计价";
+    }else if(d.price > 0 && conv > 0){
+      const gap = (d.price / conv - 1) * 100;
+      sub = '较折算价<span style="color:' + (gap > 0 ? "#c0392b" : "#2f855a") + ';font-weight:600"> '
+          + (gap > 0 ? "+" : "") + gap.toFixed(0) + '%</span>';
+    }
+    return '<div class="cell-main" style="font-size:13px">' + conv.toFixed(3) + '</div>'
+         + '<div class="cell-sub">' + sub + '</div>';
+  }
+
+  function renderDict(){
+    $("dictBody").innerHTML = state.dict.map(function(d, i){
+      const pieceSel = d.mode === "piece" ? " selected" : "";
+      const timeSel = d.mode === "time" ? " selected" : "";
+      const priceAttr = (d.mode === "time")
+        ? ' disabled placeholder="—"'
+        : ' value="' + (d.price != null ? d.price : "") + '"';
+      return '<tr data-drow="' + i + '">'
+        + '<td data-lb="工序名称"><input class="inp tiny" style="text-align:left" value="' + esc(d.name) + '" maxlength="40" data-di="' + i + '" data-dk="name"></td>'
+        + '<td data-lb="工序类别"><input class="inp tiny" style="text-align:left" value="' + esc(d.cat) + '" maxlength="20" data-di="' + i + '" data-dk="cat"></td>'
+        + '<td data-lb="计价方式"><select data-di="' + i + '" data-dk="mode"><option value="piece"' + pieceSel + '>计件单价</option>'
+        + '<option value="time"' + timeSel + '>按工时</option></select></td>'
+        + '<td data-lb="工序单价（元）"><input class="inp tiny" type="number" min="0" step="0.001"' + priceAttr + ' data-di="' + i + '" data-dk="price"></td>'
+        + '<td data-lb="计量单位"><input class="inp tiny" value="' + esc(d.unit) + '" maxlength="12" data-di="' + i + '" data-dk="unit"></td>'
+        + '<td data-lb="工时定额（秒/件）"><input class="inp tiny" type="number" min="1" step="1" value="' + d.secs + '" data-di="' + i + '" data-dk="secs"></td>'
+        + '<td class="convcell" data-lb="折算人工成本">' + convHtml(d) + '</td>'
+        + '<td><button class="del" data-ddel="' + i + '" title="删除该工序">×</button></td>'
+        + '</tr>';
+    }).join("");
+  }
+
+  function patchDict(){
+    state.dict.forEach(function(d, i){
+      const tr = $("dictBody").querySelector('tr[data-drow="' + i + '"]');
+      if(tr) tr.querySelector(".convcell").innerHTML = convHtml(d);
+    });
+  }
+
+  /* ---------- 刷新入口 ---------- */
+  function updSec(){ $("dSec").textContent = nf(Math.round(dailySecs())); }
+
+  function refresh(){           // 结构变化：重建
+    const res = calc();
+    renderGrid(res); renderSummary(res); renderDict(); updSec(); save();
+  }
+  function repaint(){           // 仅数值变化：不动输入框
+    const res = calc();
+    patchGrid(res); renderSummary(res); patchDict(); updSec(); save();
+  }
+
+  // 字典改工序名时，同步主表下拉里的选项文字
+  function syncOption(oldName, newName){
+    $("grid").querySelectorAll('select[data-k="name"]').forEach(function(sel){
+      Array.prototype.forEach.call(sel.options, function(o){
+        if(o.value === oldName){ o.value = newName; o.textContent = newName; }
+      });
+    });
+  }
+
+  /* ---------- 事件：参数 ---------- */
+  ["pName","pBatch","pWage","pHours","pEff"].forEach(function(id){
+    const el = $(id);
+    el.addEventListener("input", function(){
+      if(id === "pName") state.params.name = el.value;
+      else if(id === "pBatch") state.params.batch = Number(el.value) || 0;
+      else if(id === "pWage") state.params.wage = Number(el.value) || 0;
+      else if(id === "pHours") state.params.hours = Number(el.value) || 0;
+      else if(id === "pEff") state.params.eff = Number(el.value) || 0;
+      repaint();
+    });
+  });
+
+  /* ---------- 事件：工序清单 ---------- */
+  $("grid").addEventListener("input", function(e){
+    const t = e.target;
+    if(t.tagName === "SELECT") return;         // 下拉交给 change
+    const i = t.dataset.i, k = t.dataset.k;
+    if(i === undefined || !k) return;
+    const idx = +i;
+    if(k === "qty") state.rows[idx].qty = (t.value === "" ? "" : clampNum(t.value, 0, 1000000, 0));
+    else if(k === "wage") state.rows[idx].wage = (t.value === "" ? "" : clampNum(t.value, 0, 10000000, 0));
+    repaint();
+  });
+
+  $("grid").addEventListener("change", function(e){
+    const t = e.target;
+    if(t.tagName === "SELECT" && t.dataset.k === "name"){
+      state.rows[+t.dataset.i].name = t.value;
+      repaint();
+    }
+  });
+
+  $("grid").addEventListener("click", function(e){
+    const b = e.target.closest("[data-del]");
+    if(!b) return;
+    state.rows.splice(+b.dataset.del, 1);
+    refresh();
+  });
+
+  /* ---------- 事件：字典 ---------- */
+  $("dictBody").addEventListener("input", function(e){
+    const t = e.target;
+    if(t.tagName === "SELECT") return;
+    const i = t.dataset.di, k = t.dataset.dk;
+    if(i === undefined || !k) return;
+    const idx = +i, d = state.dict[idx];
+    if(k === "name"){
+      const oldName = d.name;
+      d.name = t.value;
+      state.rows.forEach(function(r){ if(r.name === oldName) r.name = t.value; });
+      syncOption(oldName, t.value);
+      const sel = $("grid").querySelector('select[data-i="' + idx + '"]');
+    }else if(k === "cat" || k === "unit"){
+      d[k] = t.value;
+    }else if(k === "price"){
+      d.price = (t.value === "" ? null : clampNum(t.value, 0, 10000000, 0));
+    }else if(k === "secs"){
+      d.secs = clampNum(t.value, 0, 86400, 0);
+    }
+    repaint();
+  });
+
+  $("dictBody").addEventListener("change", function(e){
+    const t = e.target;
+    if(t.tagName === "SELECT" && t.dataset.dk === "mode"){
+      const idx = +t.dataset.di;
+      state.dict[idx].mode = t.value;
+      if(t.value === "time") state.dict[idx].price = null;
+      refresh();
+    }
+  });
+
+  $("dictBody").addEventListener("click", function(e){
+    const b = e.target.closest("[data-ddel]");
+    if(!b) return;
+    const nm = state.dict[+b.dataset.ddel].name;
+    state.dict.splice(+b.dataset.ddel, 1);
+    state.rows = state.rows.filter(function(r){ return r.name !== nm; });
+    refresh();
+  });
+
+  /* ---------- 增行 / 重置 / 打印 ---------- */
+  $("addBtn").addEventListener("click", function(){
+    const used = new Set(state.rows.map(function(r){ return r.name; }));
+    const pick = state.dict.find(function(d){ return !used.has(d.name); }) || state.dict[0];
+    state.rows.push({name: pick ? pick.name : "", qty: 1, wage: ""});
+    refresh();
+    const rows = $("grid").querySelectorAll("tr[data-row]");
+    if(rows.length) rows[rows.length - 1].scrollIntoView({block:"nearest", behavior:"smooth"});
+  });
+
+  $("addDictBtn").addEventListener("click", function(){
+    state.dict.push({name:"新工序" + (state.dict.length + 1), cat:"其他", mode:"piece", price:0.1, unit:"元/处", secs:10});
+    refresh();
+    document.querySelector(".dict").scrollIntoView({behavior:"smooth", block:"start"});
+  });
+
+  $("resetBtn").addEventListener("click", function(){
+    if(!confirm("确定恢复到示例数据？当前修改将丢失。")) return;
+    state = {
+      params: Object.assign({}, DEF_PARAMS),
+      dict: JSON.parse(JSON.stringify(DEF_DICT)),
+      rows: JSON.parse(JSON.stringify(DEF_ROWS))
+    };
+    syncInputs();
+    refresh();
+  });
+
+  $("printBtn").addEventListener("click", function(){ window.print(); });
+
+  function syncInputs(){
+    $("pName").value = state.params.name;
+    $("pBatch").value = state.params.batch;
+    $("pWage").value = state.params.wage;
+    $("pHours").value = state.params.hours;
+    $("pEff").value = state.params.eff;
+  }
+
+  /* ---------- 启动 ---------- */
+  /* 未通过登录校验时只渲染内置示例，不读取本地真实数据 */
+  function authed(){
+    try{ return sessionStorage.getItem("wh-sess-v1") === "ok"; }catch(e){ return false; }
+  }
+  if(authed()) load();
+  syncInputs();
+  refresh();
+
+  /* ---------- 窄屏：工序单价字典默认收起 ---------- */
+  (function(){
+    var dict = document.querySelector(".dict"), tgl = $("dictTgl");
+    if(!dict || !tgl) return;
+    if(window.matchMedia("(max-width:760px)").matches){
+      dict.classList.add("collapsed"); tgl.textContent = "展开";
+    }else{
+      tgl.textContent = "收起";
+    }
+    tgl.addEventListener("click", function(){
+      var c = dict.classList.toggle("collapsed");
+      tgl.textContent = c ? "展开" : "收起";
+      tgl.setAttribute("aria-expanded", c ? "false" : "true");
+    });
+  })();
+
+  /* 对外暴露给导出模块 / 登录模块 */
+  window.WHApp = {
+    get state(){ return state; },
+    calc: calc,
+    dailySecs: dailySecs,
+    reload: function(){ load(); syncInputs(); refresh(); }
+  };
+})();
+
+</script>
+<script>
+/* ============================================================
+   线束工序成本计算器 · 导出模块
+   纯前端生成 .xlsx / .docx（自实现 ZIP + OOXML，零依赖、可离线）
+   PDF 走浏览器打印（打印对话框选「另存为 PDF」）
+   ============================================================ */
+(function () {
+  "use strict";
+
+  /* ---------------- CRC32 ---------------- */
+  var CRC_TABLE = (function () {
+    var t = new Uint32Array(256), c, n, k;
+    for (n = 0; n < 256; n++) {
+      c = n;
+      for (k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+
+  function crc32(u8) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  function utf8(str) {
+    if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(str);
+    var s = unescape(encodeURIComponent(str)), a = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+    return a;
+  }
+
+  function leNum(n, bytes) {
+    var a = new Uint8Array(bytes);
+    n = n >>> 0;
+    for (var i = 0; i < bytes; i++) { a[i] = n & 0xFF; n = n >>> 8; }
+    return a;
+  }
+
+  function concatAll(list) {
+    var len = 0, i;
+    for (i = 0; i < list.length; i++) len += list[i].length;
+    var out = new Uint8Array(len), p = 0;
+    for (i = 0; i < list.length; i++) { out.set(list[i], p); p += list[i].length; }
+    return out;
+  }
+
+  /* ZIP 打包（store 存储，无压缩；Excel / Word 均可正常打开） */
+  function zip(files) {
+    var body = [], central = [], offset = 0;
+    files.forEach(function (f) {
+      var nameU8 = utf8(f.name);
+      var data = (typeof f.data === "string") ? utf8(f.data) : f.data;
+      var crc = crc32(data);
+
+      var local = concatAll([
+        leNum(0x04034b50, 4), leNum(20, 2), leNum(0x0800, 2), leNum(0, 2),
+        leNum(0, 2), leNum(0, 2), leNum(crc, 4), leNum(data.length, 4),
+        leNum(data.length, 4), leNum(nameU8.length, 2), leNum(0, 2), nameU8
+      ]);
+
+      body.push(local, data);
+
+      central.push(concatAll([
+        leNum(0x02014b50, 4), leNum(20, 2), leNum(20, 2), leNum(0x0800, 2), leNum(0, 2),
+        leNum(0, 2), leNum(0, 2), leNum(crc, 4), leNum(data.length, 4), leNum(data.length, 4),
+        leNum(nameU8.length, 2), leNum(0, 2), leNum(0, 2), leNum(0, 2), leNum(0, 2),
+        leNum(0, 4), leNum(offset, 4), nameU8
+      ]));
+
+      offset += local.length + data.length;
+    });
+
+    var cd = concatAll(central);
+    var eocd = concatAll([
+      leNum(0x06054b50, 4), leNum(0, 2), leNum(0, 2),
+      leNum(files.length, 2), leNum(files.length, 2),
+      leNum(cd.length, 4), leNum(offset, 4), leNum(0, 2)
+    ]);
+    return concatAll(body.concat([cd, eocd]));
+  }
+
+  /* ---------------- 小工具 ---------------- */
+  function xesc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+  }
+  function colName(n) {
+    var s = "";
+    while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = Math.floor((n - 1) / 26); }
+    return s;
+  }
+  function pad2(n) { return (n < 10 ? "0" : "") + n; }
+  function todayStr() {
+    var d = new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+  function stampStr() {
+    var d = new Date();
+    return "" + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
+  }
+  function money2(n) { return "¥" + (Math.round((n || 0) * 100) / 100).toFixed(2); }
+  function num0(n) { return (Math.round(n || 0)).toLocaleString("zh-CN"); }
+  function pct1(n) { return ((n || 0) * 100).toFixed(1) + "%"; }
+
+  function download(bytes, filename, mime) {
+    var blob = new Blob([bytes], { type: mime });
+    if (window.navigator && window.navigator.msSaveOrOpenBlob) {
+      window.navigator.msSaveOrOpenBlob(blob, filename);
+      return;
+    }
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = filename; a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(url); if (a.parentNode) a.parentNode.removeChild(a); }, 2000);
+  }
+
+  /* ---------------- 数据模型 ---------------- */
+  function buildModel() {
+    var st = window.WHApp.state;
+    var res = window.WHApp.calc();
+    var ds = window.WHApp.dailySecs();
+
+    var rows = res.rows.filter(function (x) { return x.name; }).map(function (x, i) {
+      return {
+        no: i + 1,
+        name: x.name,
+        mode: x.mode === "piece" ? "计件单价" : (x.mode === "time" ? "按工时" : "—"),
+        price: x.unit,
+        qty: Number(x.qty) || 0,
+        wage: x.wage,
+        cost: x.cost,
+        pct: res.total > 0 ? x.cost / res.total : 0,
+        proc: x.d
+          ? (x.mode === "piece"
+              ? x.unit.toFixed(3) + " 元 × " + (Number(x.qty) || 0) + " = " + x.cost.toFixed(2) + " 元"
+              : num0(x.wage) + " 元/天 ÷ " + num0(Math.round(x.dailyOut)) + " 件/天 = " + x.unit.toFixed(3) + " 元/件 × " + (Number(x.qty) || 0))
+          : "缺字典数据"
+      };
+    });
+
+    var hot = res.hotIdx >= 0 ? res.rows[res.hotIdx] : null;
+    var positives = res.rows.filter(function (x) { return x.cost > 0; });
+    if (!hot && positives.length) {
+      var mx = positives.reduce(function (a, b) { return b.cost > a.cost ? b : a; });
+      hot = mx;
+    }
+
+    var info = "产品型号：" + (st.params.name || "—")
+      + "　　批量：" + num0(st.params.batch) + " 套"
+      + "　　核算日期：" + todayStr()
+      + "　　默认日工资：" + money2(st.params.wage) + "/天"
+      + "　　日有效工时：" + num0(Math.round(ds)) + " 秒";
+
+    var dictRows = (st.dict || []).map(function (d, i) {
+      var out = d.secs > 0 ? ds / d.secs : 0;
+      var conv = out > 0 ? (Number(st.params.wage) || 0) / out : 0;
+      return {
+        no: i + 1,
+        name: d.name,
+        cat: d.cat,
+        mode: d.mode === "piece" ? "计件单价" : "按工时",
+        price: d.mode === "piece" ? (Number(d.price) || 0) : 0,
+        unit: d.unit,
+        secs: d.secs,
+        conv: conv
+      };
+    });
+
+    return {
+      title: "线束工序加工成本计算表",
+      info: info,
+      headers: ["序号", "工序名称", "计价方式", "采用单价（元）", "单套用量", "日工资（元）", "工序成本（元）", "占比", "计算过程明细"],
+      rows: rows,
+      total: res.total,
+      batch: Number(st.params.batch) || 0,
+      batchCost: res.total * (Number(st.params.batch) || 0),
+      hot: hot ? { name: hot.name, cost: hot.cost, pct: res.total > 0 ? hot.cost / res.total : 0 } : null,
+      dict: dictRows,
+      notes: [
+        "计价规则：计件工序 工序成本 = 单套用量 × 字典单价；按工时工序（无单价）日产量 = 日有效工时 ÷ 工时定额，折算单价 = 日工资 ÷ 日产量。",
+        "单套用量指一件成品需要的根 / 个 / 点 / 处数量，不是生产批量；合计行即单套加工成本。",
+        "本表仅核算加工工时成本，不含线材端子等材料费、设备折旧、不良返工与制造费用分摊，报价时需另行加计。",
+        "工序单价为示例参考值（线束行业常见水平），正式使用前请替换为本厂实际工价。"
+      ]
+    };
+  }
+
+  /* ============================================================
+     XLSX
+     ============================================================ */
+  var S = {
+    DEF: 0, TITLE: 1, SUB: 2, HEAD: 3, TXT: 4, CTR: 5, MONEY: 6, PRICE: 7,
+    PCT: 8, SUMTXT: 9, SUMMONEY: 10, BLOCK: 11, NOTE: 12, LABEL: 13, BIG: 14,
+    HOT: 15, SUMPCT: 16
+  };
+
+  function xlsxStyles() {
+    var F = ' xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"';
+    var s = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    s += '<styleSheet' + F + '>';
+
+    s += '<numFmts count="3">'
+      + '<numFmt numFmtId="164" formatCode="&quot;¥&quot;#,##0.00;-&quot;¥&quot;#,##0.00;&quot;—&quot;"/>'
+      + '<numFmt numFmtId="165" formatCode="0.000;-0.000;&quot;—&quot;"/>'
+      + '<numFmt numFmtId="166" formatCode="0.0%"/>'
+      + '</numFmts>';
+
+    s += '<fonts count="8">'
+      + '<font><sz val="10"/><color rgb="FF1F2937"/><name val="微软雅黑"/><charset val="134"/></font>'   // 0
+      + '<font><b/><sz val="16"/><color rgb="FFFFFFFF"/><name val="微软雅黑"/><charset val="134"/></font>' // 1
+      + '<font><b/><sz val="10"/><color rgb="FFFFFFFF"/><name val="微软雅黑"/><charset val="134"/></font>' // 2
+      + '<font><b/><sz val="10"/><color rgb="FF1F3864"/><name val="微软雅黑"/><charset val="134"/></font>' // 3
+      + '<font><sz val="9"/><color rgb="FF808080"/><name val="微软雅黑"/><charset val="134"/></font>'      // 4
+      + '<font><b/><sz val="14"/><color rgb="FF1F3864"/><name val="微软雅黑"/><charset val="134"/></font>' // 5
+      + '<font><b/><sz val="10"/><color rgb="FFC00000"/><name val="微软雅黑"/><charset val="134"/></font>' // 6
+      + '<font><sz val="9"/><color rgb="FF404040"/><name val="微软雅黑"/><charset val="134"/></font>'      // 7
+      + '</fonts>';
+
+    s += '<fills count="7">'
+      + '<fill><patternFill patternType="none"/></fill>'
+      + '<fill><patternFill patternType="gray125"/></fill>'
+      + '<fill><patternFill patternType="solid"><fgColor rgb="FF2F5597"/><bgColor indexed="64"/></patternFill></fill>'
+      + '<fill><patternFill patternType="solid"><fgColor rgb="FFD9E2F3"/><bgColor indexed="64"/></patternFill></fill>'
+      + '<fill><patternFill patternType="solid"><fgColor rgb="FF4472C4"/><bgColor indexed="64"/></patternFill></fill>'
+      + '<fill><patternFill patternType="solid"><fgColor rgb="FFFFF5F4"/><bgColor indexed="64"/></patternFill></fill>'
+      + '<fill><patternFill patternType="solid"><fgColor rgb="FFF2F5FA"/><bgColor indexed="64"/></patternFill></fill>'
+      + '</fills>';
+
+    var bd = '<left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right>'
+      + '<top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/>';
+    s += '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>'
+      + '<border>' + bd + '</border></borders>';
+
+    s += '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>';
+
+    function xf(font, fill, border, align, numFmt) {
+      var a = '';
+      if (align === "c") a = '<alignment horizontal="center" vertical="center"/>';
+      else if (align === "l") a = '<alignment horizontal="left" vertical="center"/>';
+      else if (align === "r") a = '<alignment horizontal="right" vertical="center"/>';
+      else if (align === "lt") a = '<alignment horizontal="left" vertical="top" wrapText="1"/>';
+      else if (align === "cw") a = '<alignment horizontal="center" vertical="center" wrapText="1"/>';
+      return '<xf numFmtId="' + (numFmt || 0) + '" fontId="' + font + '" fillId="' + fill + '" borderId="' + border + '" xfId="0"'
+        + ' applyFont="1" applyFill="1" applyBorder="1" applyNumberFormat="1"'
+        + (a ? ' applyAlignment="1">' + a + '</xf>' : '/>');
+    }
+
+    s += '<cellXfs count="17">'
+      + xf(0, 0, 0)                       // 0 默认
+      + xf(1, 2, 0, "c")                  // 1 标题
+      + xf(4, 0, 0, "l")                  // 2 副标题
+      + xf(2, 4, 1, "cw")                 // 3 表头
+      + xf(0, 0, 1, "l")                  // 4 文本
+      + xf(0, 0, 1, "c")                  // 5 居中
+      + xf(0, 0, 1, "r", 164)             // 6 金额
+      + xf(0, 0, 1, "r", 165)             // 7 单价 3 位
+      + xf(0, 0, 1, "r", 166)             // 8 百分比
+      + xf(2, 2, 1, "l")                  // 9 合计文字
+      + xf(2, 2, 1, "r", 164)             // 10 合计金额
+      + xf(3, 3, 1, "l")                  // 11 区块标题
+      + xf(7, 0, 0, "lt")                 // 12 说明
+      + xf(3, 3, 1, "c")                  // 13 结果标签
+      + xf(5, 0, 1, "c", 164)             // 14 结果大数字
+      + xf(6, 5, 1, "c")                  // 15 最高项高亮
+      + xf(2, 2, 1, "r", 166)             // 16 合计百分比
+      + '</cellXfs>';
+
+    s += '<cellStyles count="1"><cellStyle name="常规" xfId="0" builtinId="0"/></cellStyles>';
+    s += '</styleSheet>';
+    return s;
+  }
+
+  function xlsxSheet(sh) {
+    var x = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+    x += '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+    x += '<sheetFormatPr defaultRowHeight="16"/>';
+    if (sh.cols && sh.cols.length) {
+      x += '<cols>';
+      sh.cols.forEach(function (w, i) {
+        x += '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>';
+      });
+      x += '</cols>';
+    }
+    x += '<sheetData>';
+    var merges = [];
+    sh.rows.forEach(function (row, ri) {
+      var r = ri + 1;
+      x += '<row r="' + r + '"' + (row.h ? ' ht="' + row.h + '" customHeight="1"' : '') + '>';
+      var col = 1;
+      (row.cells || []).forEach(function (c) {
+        if (c && c.span && c.span > 1) {
+          merges.push(colName(col) + r + ":" + colName(col + c.span - 1) + r);
+        }
+        if (c != null) {
+          var ref = colName(col) + r;
+          var st = (c.s == null ? 0 : c.s);
+          var v = c.v;
+          if (v === "" || v == null) {
+            x += '<c r="' + ref + '" s="' + st + '"/>';
+          } else if (typeof v === "number" && isFinite(v)) {
+            x += '<c r="' + ref + '" s="' + st + '"><v>' + v + '</v></c>';
+          } else {
+            x += '<c r="' + ref + '" s="' + st + '" t="inlineStr"><is><t xml:space="preserve">' + xesc(v) + '</t></is></c>';
+          }
+        }
+        col += (c && c.span) ? c.span : 1;
+      });
+      x += '</row>';
+    });
+    x += '</sheetData>';
+    if (merges.length) {
+      x += '<mergeCells count="' + merges.length + '">';
+      merges.forEach(function (m) { x += '<mergeCell ref="' + m + '"/>'; });
+      x += '</mergeCells>';
+    }
+    x += '<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>';
+    x += '<pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>';
+    x += '</worksheet>';
+    return x;
+  }
+
+  function buildXlsx(m) {
+    var main = { cols: [5.5, 16, 11, 13, 10, 11, 13, 8, 44], rows: [] };
+    main.rows.push({ h: 34, cells: [{ v: m.title, s: S.TITLE, span: 9 }] });
+    main.rows.push({ h: 20, cells: [{ v: m.info, s: S.SUB, span: 9 }] });
+    main.rows.push({ h: 8, cells: [{ v: "", s: S.DEF }] });
+    main.rows.push({ h: 30, cells: m.headers.map(function (h) { return { v: h, s: S.HEAD }; }) });
+
+    m.rows.forEach(function (r) {
+      var isHot = m.hot && r.cost > 0 && r.name === m.hot.name && m.rows.filter(function (x) { return x.cost > 0; }).length > 1;
+      main.rows.push({
+        h: 21, cells: [
+          { v: r.no, s: S.CTR },
+          { v: r.name, s: isHot ? S.HOT : S.TXT },
+          { v: r.mode, s: S.CTR },
+          { v: r.price, s: S.PRICE },
+          { v: r.qty, s: S.CTR },
+          { v: r.wage, s: S.MONEY },
+          { v: r.cost, s: S.MONEY },
+          { v: r.pct, s: S.PCT },
+          { v: r.proc, s: S.TXT }
+        ]
+      });
+    });
+
+    main.rows.push({
+      h: 25, cells: [
+        { v: "工序加工成本合计（单套）", s: S.SUMTXT, span: 6 },
+        { v: m.total, s: S.SUMMONEY },
+        { v: 1, s: S.SUMPCT },
+        { v: "", s: S.SUMTXT }
+      ]
+    });
+
+    main.rows.push({ h: 12, cells: [{ v: "", s: S.DEF }] });
+    main.rows.push({ h: 24, cells: [{ v: "核算结果", s: S.BLOCK, span: 9 }] });
+    main.rows.push({
+      h: 30, cells: [
+        { v: "单套加工成本（元/套）", s: S.LABEL, span: 2 },
+        { v: m.total, s: S.BIG, span: 2 },
+        { v: "批次总成本（元）", s: S.LABEL, span: 2 },
+        { v: m.batchCost, s: S.BIG, span: 2 },
+        { v: "", s: S.LABEL }
+      ]
+    });
+    main.rows.push({
+      h: 30, cells: [
+        { v: "成本最高工序", s: S.LABEL, span: 2 },
+        { v: m.hot ? m.hot.name : "—", s: S.HOT, span: 2 },
+        { v: "该项成本 / 占单套比例", s: S.LABEL, span: 2 },
+        { v: m.hot ? (money2(m.hot.cost) + "  /  " + pct1(m.hot.pct)) : "—", s: S.HOT, span: 2 },
+        { v: "", s: S.LABEL }
+      ]
+    });
+
+    main.rows.push({ h: 12, cells: [{ v: "", s: S.DEF }] });
+    main.rows.push({ h: 22, cells: [{ v: "计算说明", s: S.BLOCK, span: 9 }] });
+    m.notes.forEach(function (n) {
+      main.rows.push({ h: 18, cells: [{ v: n, s: S.NOTE, span: 9 }] });
+    });
+
+    var dict = { cols: [5.5, 16, 12, 11, 13, 10, 14, 13], rows: [] };
+    dict.rows.push({ h: 30, cells: [{ v: "工序单价字典", s: S.TITLE, span: 8 }] });
+    dict.rows.push({ h: 8, cells: [{ v: "", s: S.DEF }] });
+    dict.rows.push({
+      h: 26, cells: [
+        { v: "序号", s: S.HEAD }, { v: "工序名称", s: S.HEAD }, { v: "工序类别", s: S.HEAD },
+        { v: "计价方式", s: S.HEAD }, { v: "工序单价（元）", s: S.HEAD }, { v: "计量单位", s: S.HEAD },
+        { v: "工时定额（秒/件）", s: S.HEAD }, { v: "折算人工成本（元）", s: S.HEAD }
+      ]
+    });
+    m.dict.forEach(function (d) {
+      dict.rows.push({
+        h: 20, cells: [
+          { v: d.no, s: S.CTR }, { v: d.name, s: S.TXT }, { v: d.cat, s: S.CTR },
+          { v: d.mode, s: S.CTR }, { v: d.price, s: S.PRICE }, { v: d.unit, s: S.CTR },
+          { v: d.secs, s: S.CTR }, { v: d.conv, s: S.PRICE }
+        ]
+      });
+    });
+
+    var files = [
+      {
+        name: "[Content_Types].xml", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+          + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+          + '<Default Extension="xml" ContentType="application/xml"/>'
+          + '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+          + '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+          + '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+          + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+          + '</Types>'
+      },
+      {
+        name: "_rels/.rels", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+          + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+          + '</Relationships>'
+      },
+      {
+        name: "xl/workbook.xml", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+          + ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+          + '<sheets>'
+          + '<sheet name="工艺成本计算" sheetId="1" r:id="rId1"/>'
+          + '<sheet name="工序单价字典" sheetId="2" r:id="rId2"/>'
+          + '</sheets></workbook>'
+      },
+      {
+        name: "xl/_rels/workbook.xml.rels", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+          + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+          + '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>'
+          + '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+          + '</Relationships>'
+      },
+      { name: "xl/styles.xml", data: xlsxStyles() },
+      { name: "xl/worksheets/sheet1.xml", data: xlsxSheet(main) },
+      { name: "xl/worksheets/sheet2.xml", data: xlsxSheet(dict) }
+    ];
+    return zip(files);
+  }
+
+  /* ============================================================
+     DOCX
+     ============================================================ */
+  function dRun(text, o) {
+    o = o || {};
+    var rpr = '<w:rPr><w:rFonts w:ascii="微软雅黑" w:eastAsia="微软雅黑" w:hAnsi="微软雅黑"/>'
+      + (o.b ? '<w:b/>' : '')
+      + (o.color ? '<w:color w:val="' + o.color + '"/>' : '')
+      + '<w:sz w:val="' + (o.sz || 18) + '"/><w:szCs w:val="' + (o.sz || 18) + '"/></w:rPr>';
+    return '<w:r>' + rpr + '<w:t xml:space="preserve">' + xesc(text) + '</w:t></w:r>';
+  }
+
+  function dPara(text, o) {
+    o = o || {};
+    var ppr = '<w:pPr>'
+      + '<w:jc w:val="' + (o.align || "left") + '"/>'
+      + '<w:spacing w:before="' + (o.before || 0) + '" w:after="' + (o.after || 40) + '" w:line="240" w:lineRule="auto"/>'
+      + '</w:pPr>';
+    return '<w:p>' + ppr + dRun(text, o) + '</w:p>';
+  }
+
+  function dCell(text, o) {
+    o = o || {};
+    var w = o.w || 1400;
+    var tcpr = '<w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/>'
+      + (o.fill ? '<w:shd w:val="clear" w:color="auto" w:fill="' + o.fill + '"/>' : '')
+      + '<w:vAlign w:val="center"/></w:tcPr>';
+    var ppr = '<w:pPr><w:jc w:val="' + (o.align || "left") + '"/>'
+      + '<w:spacing w:before="20" w:after="20" w:line="240" w:lineRule="auto"/></w:pPr>';
+    return '<w:tc>' + tcpr + '<w:p>' + ppr + dRun(text, o) + '</w:p></w:tc>';
+  }
+
+  function buildDocx(m) {
+    var TBL_W = 15200;
+    var colW = [700, 1650, 1150, 1300, 1050, 1200, 1350, 950, 5850];
+
+    function tblBorders() {
+      var one = '<w:top w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>'
+        + '<w:left w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>'
+        + '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>'
+        + '<w:right w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>'
+        + '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>'
+        + '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="BFBFBF"/>';
+      return '<w:tblBorders>' + one + '</w:tblBorders>';
+    }
+
+    function table(rowsXml, gridW) {
+      var grid = '<w:tblGrid>' + gridW.map(function (w) { return '<w:gridCol w:w="' + w + '"/>'; }).join("") + '</w:tblGrid>';
+      return '<w:tbl><w:tblPr><w:tblW w:w="' + TBL_W + '" w:type="dxa"/>'
+        + '<w:jc w:val="center"/>' + tblBorders() + '<w:tblLayout w:type="fixed"/>'
+        + '<w:tblCellMar><w:top w:w="30" w:type="dxa"/><w:left w:w="60" w:type="dxa"/>'
+        + '<w:bottom w:w="30" w:type="dxa"/><w:right w:w="60" w:type="dxa"/></w:tblCellMar>'
+        + '</w:tblPr>' + grid + rowsXml + '</w:tbl>';
+    }
+
+    var body = "";
+    // 标题
+    body += dPara(m.title, { align: "center", b: true, sz: 30, color: "1F3864", after: 60 });
+    body += dPara(m.info, { align: "center", sz: 16, color: "666666", after: 120 });
+
+    // 明细表
+    var head = '<w:tr><w:trPr><w:tblHeader/></w:trPr>'
+      + m.headers.map(function (h, i) {
+          return dCell(h, { w: colW[i], fill: "4472C4", color: "FFFFFF", b: true, sz: 16, align: "center" });
+        }).join("") + '</w:tr>';
+
+    var trs = m.rows.map(function (r) {
+      var isHot = m.hot && r.cost > 0 && r.name === m.hot.name && m.rows.filter(function (x) { return x.cost > 0; }).length > 1;
+      var fill = isHot ? "FFF5F4" : null;
+      var col = isHot ? "C00000" : null;
+      var base = { sz: 16, fill: fill, color: col };
+      return '<w:tr>'
+        + dCell(r.no, Object.assign({}, base, { w: colW[0], align: "center" }))
+        + dCell(r.name, Object.assign({}, base, { w: colW[1], b: isHot }))
+        + dCell(r.mode, Object.assign({}, base, { w: colW[2], align: "center" }))
+        + dCell(r.price > 0 ? r.price.toFixed(3) : "—", Object.assign({}, base, { w: colW[3], align: "right" }))
+        + dCell(String(r.qty), Object.assign({}, base, { w: colW[4], align: "center" }))
+        + dCell(money2(r.wage).replace("¥", ""), Object.assign({}, base, { w: colW[5], align: "right" }))
+        + dCell(r.cost.toFixed(2), Object.assign({}, base, { w: colW[6], align: "right", b: true }))
+        + dCell(pct1(r.pct), Object.assign({}, base, { w: colW[7], align: "right" }))
+        + dCell(r.proc, Object.assign({}, base, { w: colW[8] }))
+        + '</w:tr>';
+    }).join("");
+
+    var sumRow = '<w:tr>'
+      + '<w:tc><w:tcPr><w:tcW w:w="' + (TBL_W - colW[6] - colW[7] - colW[8]) + '" w:type="dxa"/>'
+      + '<w:gridSpan w:val="6"/><w:shd w:val="clear" w:color="auto" w:fill="2F5597"/>'
+      + '<w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/>'
+      + '<w:spacing w:before="40" w:after="40"/></w:pPr>'
+      + dRun("工序加工成本合计（单套）", { b: true, sz: 18, color: "FFFFFF" }) + '</w:p></w:tc>'
+      + dCell(money2(m.total), { w: colW[6], fill: "2F5597", color: "FFFFFF", b: true, sz: 20, align: "right" })
+      + dCell("100.0%", { w: colW[7], fill: "2F5597", color: "FFFFFF", b: true, sz: 16, align: "right" })
+      + dCell("各工序成本之和", { w: colW[8], fill: "2F5597", color: "FFFFFF", sz: 16 })
+      + '</w:tr>';
+
+    body += table(head + trs + sumRow, colW);
+
+    // 摘要表
+    body += dPara("", { sz: 12, after: 0 });
+    var sw = [2600, 3200, 9400];
+    var sumHead = '<w:tr>'
+      + dCell("核算结果", { w: sw[0], fill: "2F5597", color: "FFFFFF", b: true, sz: 18, align: "center" })
+      + dCell("数值", { w: sw[1], fill: "2F5597", color: "FFFFFF", b: true, sz: 18, align: "center" })
+      + dCell("说明", { w: sw[2], fill: "2F5597", color: "FFFFFF", b: true, sz: 18, align: "center" })
+      + '</w:tr>';
+    var r1 = '<w:tr>'
+      + dCell("单套加工成本", { w: sw[0], fill: "D9E2F3", b: true, sz: 18 })
+      + dCell(money2(m.total) + " /套", { w: sw[1], b: true, sz: 20, color: "1F3864", align: "center" })
+      + dCell("全部工序成本合计，即一件成品的加工费", { w: sw[2], sz: 16 })
+      + '</w:tr>';
+    var r2 = '<w:tr>'
+      + dCell("批次总成本", { w: sw[0], fill: "D9E2F3", b: true, sz: 18 })
+      + dCell(money2(m.batchCost), { w: sw[1], b: true, sz: 20, color: "1F3864", align: "center" })
+      + dCell("单套加工成本 × 批量 " + num0(m.batch) + " 套", { w: sw[2], sz: 16 })
+      + '</w:tr>';
+    var r3 = '<w:tr>'
+      + dCell("成本最高工序", { w: sw[0], fill: "D9E2F3", b: true, sz: 18 })
+      + dCell(m.hot ? m.hot.name : "—", { w: sw[1], b: true, sz: 20, color: "C00000", align: "center" })
+      + dCell(m.hot ? (money2(m.hot.cost) + "，占单套成本 " + pct1(m.hot.pct) + "，优先作为降本改善对象") : "无数据", { w: sw[2], sz: 16 })
+      + '</w:tr>';
+    body += table(sumHead + r1 + r2 + r3, sw);
+
+    // 字典表
+    body += dPara("附：工序单价字典", { b: true, sz: 18, color: "1F3864", before: 200, after: 80 });
+    var dw = [700, 1900, 1500, 1400, 1600, 1200, 1800, 2100, 3000];
+    var dTotal = dw.reduce(function (a, b) { return a + b; }, 0);
+    var dHead = '<w:tr>'
+      + ["序号", "工序名称", "工序类别", "计价方式", "工序单价（元）", "计量单位", "工时定额（秒/件）", "折算人工成本（元）"]
+        .map(function (h) { return dCell(h, { w: 0, fill: "4472C4", color: "FFFFFF", b: true, sz: 15, align: "center" }); }).join("")
+      + '</w:tr>';
+    // 均分列宽
+    var each = Math.floor(TBL_W / 8);
+    var dGrid = [each, each, each, each, each, each, each, TBL_W - each * 7];
+    var dHead2 = '<w:tr>'
+      + ["序号", "工序名称", "工序类别", "计价方式", "工序单价（元）", "计量单位", "工时定额（秒/件）", "折算人工成本（元）"]
+        .map(function (h, i) { return dCell(h, { w: dGrid[i], fill: "4472C4", color: "FFFFFF", b: true, sz: 15, align: "center" }); }).join("")
+      + '</w:tr>';
+    var dRows = m.dict.map(function (d) {
+      return '<w:tr>'
+        + dCell(d.no, { w: dGrid[0], sz: 15, align: "center" })
+        + dCell(d.name, { w: dGrid[1], sz: 15 })
+        + dCell(d.cat, { w: dGrid[2], sz: 15, align: "center" })
+        + dCell(d.mode, { w: dGrid[3], sz: 15, align: "center" })
+        + dCell(d.price > 0 ? d.price.toFixed(3) : "—", { w: dGrid[4], sz: 15, align: "right" })
+        + dCell(d.unit, { w: dGrid[5], sz: 15, align: "center" })
+        + dCell(String(d.secs), { w: dGrid[6], sz: 15, align: "center" })
+        + dCell(d.conv.toFixed(3), { w: dGrid[7], sz: 15, align: "right" })
+        + '</w:tr>';
+    }).join("");
+    body += table(dHead2 + dRows, dGrid);
+
+    // 说明
+    body += dPara("", { sz: 12, after: 0 });
+    m.notes.forEach(function (n) {
+      body += dPara("· " + n, { sz: 15, color: "595959", after: 30 });
+    });
+
+    var sect = '<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>'
+      + '<w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="0" w:footer="0" w:gutter="0"/>'
+      + '</w:sectPr>';
+
+    var doc = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+      + '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+      + '<w:body>' + body + sect + '</w:body></w:document>';
+
+    return zip([
+      {
+        name: "[Content_Types].xml", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+          + '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+          + '<Default Extension="xml" ContentType="application/xml"/>'
+          + '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>'
+          + '</Types>'
+      },
+      {
+        name: "_rels/.rels", data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+          + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+          + '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>'
+          + '</Relationships>'
+      },
+      { name: "word/document.xml", data: doc }
+    ]);
+  }
+
+  /* ---------------- 文件名 ---------------- */
+  function safeName() {
+    var st = window.WHApp.state;
+    var n = String((st.params && st.params.name) || "线束产品")
+      .replace(/[\\\/:*?"<>|\s]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 26) || "线束产品";
+    return n;
+  }
+  function fname(ext) { return "线束工序成本_" + safeName() + "_" + stampStr() + "." + ext; }
+
+  /* ---------------- toast ---------------- */
+  function toast(msg, ms) {
+    var el = document.getElementById("whToast");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "whToast";
+      el.className = "toast";
+      document.body.appendChild(el);
+    }
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.classList.remove("show"); }, ms || 3600);
+  }
+
+  /* ============================================================
+     PDF：canvas 绘制 A4 横向报表 → JPEG → 内嵌生成 PDF
+     ============================================================ */
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h); ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  var PDF_W = 1123, PDF_H = 794, PDF_M = 34;
+
+  function drawReport(m) {
+    var SCALE = 2.5;
+    var c = document.createElement("canvas");
+    c.width = Math.round(PDF_W * SCALE);
+    c.height = Math.round(PDF_H * SCALE);
+    var ctx = c.getContext("2d");
+    ctx.scale(SCALE, SCALE);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, PDF_W, PDF_H);
+    ctx.textBaseline = "middle";
+
+    var M = PDF_M, CW = PDF_W - 2 * M;
+    var cols = [
+      { w: 46, a: "center" }, { w: 150, a: "left" }, { w: 100, a: "center" },
+      { w: 96, a: "right" }, { w: 78, a: "center" }, { w: 88, a: "right" },
+      { w: 96, a: "right" }, { w: 82, a: "right" }, { w: 319, a: "left" }
+    ];
+    var xs = [], acc = M;
+    cols.forEach(function (cc) { xs.push(acc); acc += cc.w; });
+
+    var headH = 27, footH = 28, notesH = m.notes.length * 14;
+    var fixed = 22 + 20 + 18 + headH + footH + 26 + 78 + 20 + notesH;
+    var rowH = Math.floor((PDF_H - 90 - fixed) / Math.max(1, m.rows.length));
+    rowH = Math.max(14, Math.min(23, rowH));
+
+    var totalH = fixed + rowH * m.rows.length;
+    var y = Math.max(34, Math.round((PDF_H - totalH) / 2));
+
+    /* 标题 */
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#1F3864";
+    ctx.font = '700 22px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText(m.title, M, y + 13);
+    y += 34;
+
+    ctx.fillStyle = "#6B7280";
+    ctx.font = '400 10.5px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.fillText(m.info, M, y + 4);
+    y += 22;
+
+    ctx.fillStyle = "#2F5597";
+    ctx.fillRect(M, y, CW, 2);
+    y += 14;
+
+    /* 表头 */
+    ctx.fillStyle = "#4472C4";
+    ctx.fillRect(M, y, CW, headH);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = '600 10.5px "Microsoft YaHei","PingFang SC",sans-serif';
+    m.headers.forEach(function (h, i) {
+      var cc = cols[i];
+      ctx.textAlign = cc.a === "right" ? "right" : (cc.a === "center" ? "center" : "left");
+      var tx = cc.a === "right" ? xs[i] + cc.w - 8 : (cc.a === "center" ? xs[i] + cc.w / 2 : xs[i] + 8);
+      ctx.fillText(h, tx, y + headH / 2 + 0.5);
+    });
+    y += headH;
+
+    /* 数据行 */
+    var positives = m.rows.filter(function (r) { return r.cost > 0; });
+    m.rows.forEach(function (r) {
+      var isHot = m.hot && r.cost > 0 && r.name === m.hot.name && positives.length > 1;
+      if (isHot) {
+        ctx.fillStyle = "#FFF5F4";
+        ctx.fillRect(M, y, CW, rowH);
+        ctx.fillStyle = "#C0392B";
+        ctx.fillRect(M, y, 3, rowH);
+      }
+      var cells = [
+        String(r.no), r.name, r.mode,
+        r.price > 0 ? r.price.toFixed(3) : "—",
+        String(r.qty), num0(r.wage),
+        r.cost.toFixed(2), pct1(r.pct), r.proc
+      ];
+      cells.forEach(function (t, i) {
+        var cc = cols[i];
+        ctx.textAlign = cc.a === "right" ? "right" : (cc.a === "center" ? "center" : "left");
+        var tx = cc.a === "right" ? xs[i] + cc.w - 8 : (cc.a === "center" ? xs[i] + cc.w / 2 : xs[i] + 8);
+        if (isHot) {
+          ctx.fillStyle = i === 1 ? "#C0392B" : "#1F2937";
+          ctx.font = (i === 1 || i === 6) ? '700 10.5px "Microsoft YaHei",sans-serif' : '400 10.5px "Microsoft YaHei",sans-serif';
+        } else {
+          ctx.fillStyle = i === 6 ? "#2F5597" : "#1F2937";
+          ctx.font = i === 6 ? '600 10.5px "Microsoft YaHei",sans-serif' : '400 10.5px "Microsoft YaHei",sans-serif';
+        }
+        var txt = t;
+        var maxW = cc.w - 14;
+        if (ctx.measureText(txt).width > maxW) {
+          while (txt.length > 1 && ctx.measureText(txt + "…").width > maxW) txt = txt.slice(0, -1);
+          txt += "…";
+        }
+        ctx.fillText(txt, tx, y + rowH / 2 + 0.5);
+      });
+      ctx.strokeStyle = "#EDF0F5";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(M, y + rowH - 0.5);
+      ctx.lineTo(M + CW, y + rowH - 0.5);
+      ctx.stroke();
+      y += rowH;
+    });
+
+    /* 合计行 */
+    ctx.fillStyle = "#2F5597";
+    ctx.fillRect(M, y, CW, footH);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = '700 11px "Microsoft YaHei","PingFang SC",sans-serif';
+    ctx.textAlign = "right";
+    var sumX = xs[6] - 8;
+    ctx.fillText("工序加工成本合计（单套）", sumX, y + footH / 2 + 0.5);
+    ctx.font = '700 13px "Microsoft YaHei",sans-serif';
+    ctx.fillText(money2(m.total), xs[6] + cols[6].w - 8, y + footH / 2 + 0.5);
+    ctx.font = '600 10.5px "Microsoft YaHei",sans-serif';
+    ctx.fillText("100.0%", xs[7] + cols[7].w - 8, y + footH / 2 + 0.5);
+    ctx.textAlign = "left";
+    ctx.font = '400 9.5px "Microsoft YaHei",sans-serif';
+    ctx.fillText("各工序成本之和", xs[8] + 8, y + footH / 2 + 0.5);
+    y += footH + 26;
+
+    /* 结果卡片 */
+    var gap = 12, cw = (CW - gap * 2) / 3, ch = 78;
+    var cards = [
+      { lab: "单套加工成本", val: money2(m.total) + " /套", sub: "一件成品的加工费", color: "#2F5597" },
+      { lab: "批次总成本", val: money2(m.batchCost), sub: "单套 × 批量 " + num0(m.batch) + " 套", color: "#2F5597" },
+      { lab: "成本最高工序", val: m.hot ? m.hot.name : "—", sub: m.hot ? (money2(m.hot.cost) + "，占 " + pct1(m.hot.pct)) : "无数据", color: "#C0392B" }
+    ];
+    cards.forEach(function (cd, i) {
+      var cx = M + i * (cw + gap);
+      ctx.fillStyle = "#FBFCFE";
+      ctx.strokeStyle = "#E1E7F0";
+      ctx.lineWidth = 1;
+      roundRect(ctx, cx, y, cw, ch, 8);
+      ctx.fill();
+      ctx.stroke();
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#8B95A5";
+      ctx.font = '600 9.5px "Microsoft YaHei",sans-serif';
+      ctx.fillText(cd.lab, cx + 14, y + 18);
+      ctx.fillStyle = cd.color;
+      ctx.font = '700 20px "Microsoft YaHei","PingFang SC",sans-serif';
+      var vt = cd.val, mw = cw - 28;
+      if (ctx.measureText(vt).width > mw) {
+        while (vt.length > 1 && ctx.measureText(vt + "…").width > mw) vt = vt.slice(0, -1);
+        vt += "…";
+      }
+      ctx.fillText(vt, cx + 14, y + 44);
+      ctx.fillStyle = "#8B95A5";
+      ctx.font = '400 9.5px "Microsoft YaHei",sans-serif';
+      ctx.fillText(cd.sub, cx + 14, y + 64);
+    });
+    y += ch + 20;
+
+    /* 说明 */
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#8B95A5";
+    ctx.font = '400 9px "Microsoft YaHei","PingFang SC",sans-serif';
+    m.notes.forEach(function (n) {
+      var t = "· " + n, maxW = CW;
+      if (ctx.measureText(t).width > maxW) {
+        while (t.length > 1 && ctx.measureText(t + "…").width > maxW) t = t.slice(0, -1);
+        t += "…";
+      }
+      ctx.fillText(t, M, y + 6);
+      y += 14;
+    });
+
+    return c;
+  }
+
+  function dataUrlToBytes(url) {
+    var b64 = url.substring(url.indexOf(",") + 1);
+    var bin = atob(b64);
+    var u8 = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return u8;
+  }
+
+  function canvasToPdf(canvas) {
+    var jpeg = dataUrlToBytes(canvas.toDataURL("image/jpeg", 0.92));
+    var pw = 841.89, ph = 595.28;
+    var chunks = [], len = 0, offs = [];
+
+    function pushU(u8) { chunks.push(u8); len += u8.length; }
+    function pushS(str) { var u = utf8(str); chunks.push(u); len += u.length; }
+    function obj(n, dict, stream) {
+      offs[n] = len;
+      pushS(n + " 0 obj\n" + dict + "\n");
+      if (stream) {
+        pushS("stream\n");
+        pushU(stream);
+        pushS("\nendstream\n");
+      }
+      pushS("endobj\n");
+    }
+
+    pushS("%PDF-1.4\n");
+    pushU(new Uint8Array([0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]));
+    obj(1, "<< /Type /Catalog /Pages 2 0 R >>");
+    obj(2, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>");
+    obj(3, "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 " + pw + " " + ph + "]"
+      + " /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>");
+    obj(4, "<< /Type /XObject /Subtype /Image /Width " + canvas.width + " /Height " + canvas.height
+      + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " + jpeg.length + " >>", jpeg);
+    var content = utf8("q " + pw + " 0 0 " + ph + " 0 0 cm /Im0 Do Q\n");
+    obj(5, "<< /Length " + content.length + " >>", content);
+
+    var xrefOff = len;
+    pushS("xref\n0 6\n0000000000 65535 f \n");
+    for (var i = 1; i <= 5; i++) {
+      pushS(("0000000000" + offs[i]).slice(-10) + " 00000 n \n");
+    }
+    pushS("trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n" + xrefOff + "\n%%EOF\n");
+
+    return concatAll(chunks);
+  }
+
+  /* ---------------- 动作 ---------------- */
+  function exportXlsx() {
+    try {
+      var m = buildModel();
+      download(buildXlsx(m), fname("xlsx"), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      toast("已生成 Excel 文件（2 个工作表：工艺成本计算 / 工序单价字典）");
+    } catch (e) {
+      toast("导出 Excel 失败：" + e.message, 5000);
+      throw e;
+    }
+  }
+
+  function exportDocx() {
+    try {
+      var m = buildModel();
+      download(buildDocx(m), fname("docx"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      toast("已生成 Word 文件（A4 横向，含明细表、核算结果、工序字典）");
+    } catch (e) {
+      toast("导出 Word 失败：" + e.message, 5000);
+      throw e;
+    }
+  }
+
+  function exportPdf() {
+    try {
+      var m = buildModel();
+      var canvas = drawReport(m);
+      download(canvasToPdf(canvas), fname("pdf"), "application/pdf");
+      toast("已生成 PDF 文件（A4 横向单页，可直接打印或发给客户）");
+    } catch (e) {
+      toast("导出 PDF 失败：" + e.message, 5000);
+      throw e;
+    }
+  }
+
+  function doPrint() {
+    document.body.classList.add("printing");
+    setTimeout(function () { window.print(); }, 120);
+  }
+
+  /* ---------------- 绑定 ---------------- */
+  function bind(id, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", fn);
+  }
+  bind("expXlsx", exportXlsx);
+  bind("expDocx", exportDocx);
+  bind("expPdf", exportPdf);
+  bind("printBtn", doPrint);
+
+  /* 供调试 / 自动化测试 */
+  window.__WHExport = {
+    model: buildModel,
+    xlsx: function () { return buildXlsx(buildModel()); },
+    docx: function () { return buildDocx(buildModel()); },
+    pdf: function () { return canvasToPdf(drawReport(buildModel())); },
+    png: function () { return drawReport(buildModel()).toDataURL("image/png"); },
+    b64: function (u8) {
+      var s = "", i;
+      for (i = 0; i < u8.length; i += 0x8000) {
+        s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+      }
+      return btoa(s);
+    }
+  };
+})();
+
+</script>
+<script>
+
+/* ============================================================
+   登录门禁
+   - 口令不存明文，仅存 SHA-256 摘要，校验在本机完成
+   - 连续失败 5 次锁定 60 秒（计数存 localStorage，刷新无法绕过）
+   - 会话存 sessionStorage：关闭标签页即退出
+   ============================================================ */
+(function () {
+  "use strict";
+  var SALT = "wh-cost-v1";
+  /* 每条为用户口令的 SHA-256 摘要（不存明文）；同一账号可登记多个等价口令 */
+  var USERS = {
+    "123456": [
+      "53eeb22b7d9382f43f6f13aba7a01238f430fa0128466d9c11d200d15f291b84",
+      "74dce7d333d66722952f1a07581596349dc8809e97d6f1ac0f630f23968f5b37"
+    ]
+  };
+  var SESS = "wh-sess-v1", SESS_VAL = "ok";
+  var LOCK = "wh-lock-v1", MAX_TRY = 5, LOCK_MS = 60000;
+  var timer = null;
+
+  function $(id) { return document.getElementById(id); }
+
+  /* 纯 JS 版 SHA-256：用于 http:// 访问（手机通过局域网 IP 打开时不是安全上下文，
+     crypto.subtle 不存在），保证不开 https 也能正常登录 */
+  var _SK = [
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+  ];
+  function _rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
+  function sha256Js(bytes) {
+    var H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    var l = bytes.length;
+    var total = (((l + 1 + 8) + 63) >> 6) << 6;
+    var m = new Uint8Array(total);
+    m.set(bytes);
+    m[l] = 0x80;
+    var bits = l * 8, hi = Math.floor(bits / 4294967296), lo = bits >>> 0;
+    m[total - 8] = (hi >>> 24) & 255; m[total - 7] = (hi >>> 16) & 255;
+    m[total - 6] = (hi >>> 8) & 255;  m[total - 5] = hi & 255;
+    m[total - 4] = (lo >>> 24) & 255; m[total - 3] = (lo >>> 16) & 255;
+    m[total - 2] = (lo >>> 8) & 255;  m[total - 1] = lo & 255;
+    var w = new Array(64), i, t;
+    for (i = 0; i < total; i += 64) {
+      for (t = 0; t < 16; t++) {
+        w[t] = (m[i + 4 * t] << 24) | (m[i + 4 * t + 1] << 16) | (m[i + 4 * t + 2] << 8) | m[i + 4 * t + 3];
+      }
+      for (t = 16; t < 64; t++) {
+        var s0 = _rotr(w[t - 15], 7) ^ _rotr(w[t - 15], 18) ^ (w[t - 15] >>> 3);
+        var s1 = _rotr(w[t - 2], 17) ^ _rotr(w[t - 2], 19) ^ (w[t - 2] >>> 10);
+        w[t] = (w[t - 16] + s0 + w[t - 7] + s1) | 0;
+      }
+      var a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+      for (t = 0; t < 64; t++) {
+        var S1 = _rotr(e, 6) ^ _rotr(e, 11) ^ _rotr(e, 25);
+        var ch = (e & f) ^ (~e & g);
+        var t1 = (h + S1 + ch + _SK[t] + w[t]) | 0;
+        var S0 = _rotr(a, 2) ^ _rotr(a, 13) ^ _rotr(a, 22);
+        var maj = (a & b) ^ (a & c) ^ (b & c);
+        var t2 = (S0 + maj) | 0;
+        h = g; g = f; f = e; e = (d + t1) | 0;
+        d = c; c = b; b = a; a = (t1 + t2) | 0;
+      }
+      H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;
+      H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;
+    }
+    var out = "";
+    for (i = 0; i < 8; i++) out += ("00000000" + (H[i] >>> 0).toString(16)).slice(-8);
+    return out;
+  }
+
+  function sha256Hex(str) {
+    var buf = new TextEncoder().encode(str);
+    if (window.crypto && window.crypto.subtle) {
+      return crypto.subtle.digest("SHA-256", buf).then(function (h) {
+        var arr = new Uint8Array(h), out = "";
+        for (var i = 0; i < arr.length; i++) out += ("0" + arr[i].toString(16)).slice(-2);
+        return out;
+      });
+    }
+    return Promise.resolve(sha256Js(buf));
+  }
+
+  function readLock() {
+    try {
+      var o = JSON.parse(localStorage.getItem(LOCK) || "{}");
+      return { n: Number(o.n) || 0, until: Number(o.until) || 0 };
+    } catch (e) { return { n: 0, until: 0 }; }
+  }
+  function writeLock(o) { try { localStorage.setItem(LOCK, JSON.stringify(o)); } catch (e) {} }
+
+  function setErr(msg) {
+    $("gErr").textContent = msg || "";
+    if (msg) {
+      var c = $("gateCard");
+      c.classList.remove("shake");
+      void c.offsetWidth;
+      c.classList.add("shake");
+    }
+  }
+
+  function enter(needReload) {
+    try { sessionStorage.setItem(SESS, SESS_VAL); } catch (e) {}
+    $("gate").classList.remove("on");
+    $("app").removeAttribute("hidden");
+    if (needReload !== false && window.WHApp && window.WHApp.reload) window.WHApp.reload();
+  }
+
+  function leave() {
+    try { sessionStorage.removeItem(SESS); } catch (e) {}
+    location.reload();
+  }
+
+  function tick() {
+    var left = readLock().until - Date.now();
+    var btn = $("gBtn");
+    if (left > 0) {
+      btn.disabled = true;
+      btn.textContent = "锁定中 " + Math.ceil(left / 1000) + " 秒";
+    } else {
+      btn.disabled = false;
+      btn.textContent = "登 录";
+      if (timer) { clearInterval(timer); timer = null; }
+    }
+  }
+  function startTimer() {
+    if (timer) clearInterval(timer);
+    timer = setInterval(tick, 300);
+    tick();
+  }
+
+  /* ---- 启动 ---- */
+  (function boot() {
+    var ok = false;
+    try { ok = sessionStorage.getItem(SESS) === SESS_VAL; } catch (e) {}
+    if (ok) {
+      enter(false);
+    } else {
+      $("gate").classList.add("on");
+      setTimeout(function () { $("gUser").focus(); }, 60);
+    }
+    if (readLock().until > Date.now()) startTimer();
+  })();
+
+  /* ---- 提交登录 ---- */
+  $("loginForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var u = $("gUser").value.trim();
+    var pw = $("gPass").value;
+    var lk = readLock();
+
+    if (lk.until > Date.now()) {
+      setErr("尝试次数过多，请 " + Math.ceil((lk.until - Date.now()) / 1000) + " 秒后再试");
+      return;
+    }
+    if (!u || !pw) { setErr("请填写账号和密码"); return; }
+    if (typeof TextEncoder === "undefined") {
+      setErr("当前浏览器版本过旧，请用手机自带浏览器或 Chrome / Edge 打开");
+      return;
+    }
+
+    $("gBtn").disabled = true;
+    sha256Hex(SALT + "::" + u + "::" + pw).then(function (hash) {
+      $("gBtn").disabled = false;
+
+      if (USERS[u] && USERS[u].indexOf(hash) !== -1) {
+        writeLock({ n: 0, until: 0 });
+        setErr("");
+        enter(true);
+        return;
+      }
+
+      lk.n = (lk.n || 0) + 1;
+      if (lk.n >= MAX_TRY) {
+        writeLock({ n: 0, until: Date.now() + LOCK_MS });
+        setErr("错误次数过多，已锁定 60 秒");
+        startTimer();
+      } else {
+        writeLock(lk);
+        setErr("账号或密码错误，还可尝试 " + (MAX_TRY - lk.n) + " 次");
+      }
+      $("gPass").value = "";
+      $("gPass").focus();
+    }).catch(function () {
+      $("gBtn").disabled = false;
+      setErr("校验过程出错，请刷新页面重试");
+    });
+  });
+
+  /* ---- 退出 ---- */
+  $("logoutBtn").addEventListener("click", function () {
+    if (confirm("确定退出登录？退出后需重新输入账号密码。")) leave();
+  });
+
+  /* ---- 安全说明 ---- */
+  function openSec() { $("secModal").classList.add("on"); }
+  function closeSec() { $("secModal").classList.remove("on"); }
+  $("secBtn").addEventListener("click", openSec);
+  $("secLink").addEventListener("click", openSec);
+  $("secClose").addEventListener("click", closeSec);
+  $("secModal").addEventListener("click", function (e) { if (e.target === this) closeSec(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSec(); });
+})();
+
+</script>
+</body>
+</html>
