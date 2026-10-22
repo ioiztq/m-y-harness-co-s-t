@@ -81,6 +81,8 @@ h1{font-size:20px;font-weight:650;letter-spacing:.3px}
 .cardhead{display:flex;align-items:center;gap:10px;padding:14px 18px 12px;border-bottom:1px solid var(--line2)}
 .cardhead h2{font-size:14px;font-weight:650}
 .chip{font-size:11.5px;color:var(--muted);background:var(--bg);padding:2px 9px;border-radius:20px;border:1px solid var(--line)}
+.chip.save{background:var(--okL);border-color:#c6e6d4;color:var(--ok);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chip.save.bad{background:var(--hotL);border-color:#f3cdc7;color:var(--hot)}
 .cardhead .mini{margin-left:auto;font-size:11.5px;color:var(--muted)}
 
 .tablescroll{overflow-x:auto}
@@ -173,7 +175,7 @@ aside{display:flex;flex-direction:column;gap:14px}
 
 /* ---------- 字典 ---------- */
 .dict{margin-top:16px}
-.dict table{min-width:760px}
+.dict table{min-width:980px}
 .dict thead th{background:#fafbfd}
 .dict td{padding:7px 10px}
 .dict input.inp.tiny{text-align:center;padding:5px 6px;font-size:12.5px}
@@ -181,6 +183,16 @@ aside{display:flex;flex-direction:column;gap:14px}
 
 footer{max-width:1240px;margin:22px auto 0;padding:0 22px;font-size:11.5px;color:var(--muted);line-height:1.7}
 footer b{color:var(--ink2)}
+
+/* 数据条：保存状态 + 备份/导入 */
+.databar{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px;
+  padding:8px 13px;background:#fff;border:1px solid var(--line);border-radius:9px;font-size:11.5px;
+}
+.databar .dstate{color:var(--muted);font-weight:600}
+.databar .dstate.ok{color:var(--ok)}
+.databar .dsep{width:1px;height:12px;background:var(--line)}
+.databar .linkbtn{font-size:11.5px;font-weight:600;color:var(--pri2)}
 
 @page{size:A4 landscape;margin:10mm}
 @media print{
@@ -223,7 +235,7 @@ footer b{color:var(--ink2)}
   .badge{font-size:7pt!important;padding:1px 5px!important;border:1px solid #cfdaea}
   .pbar .pv{font-size:7pt!important;width:34px!important}
   .pbar .track{height:5px!important}
-  .tfoot,.addbtn,.del,.dict{display:none!important}
+  .tfoot,.addbtn,.del,.dict,.databar{display:none!important}
   footer{margin-top:8px!important;color:#666!important;font-size:7pt!important;border-top:1px solid #dde3ec;padding-top:6px;line-height:1.6}
 }
 
@@ -298,7 +310,7 @@ footer b{color:var(--ink2)}
   font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:20px;cursor:pointer;white-space:nowrap;
 }
 .tgl:hover{background:var(--priL);border-color:var(--pri2)}
-.dict.collapsed .tablescroll,.dict.collapsed .tfoot{display:none}
+.dict.collapsed .tablescroll{display:none}
 
 
 /* ===== 手机 / 窄屏适配（不影响打印） ===== */
@@ -329,6 +341,9 @@ footer b{color:var(--ink2)}
   .hotcard .hname{font-size:20px}
   .rank{padding:14px}
   footer{padding:0 14px;font-size:11px;margin-top:16px}
+  .databar{gap:8px;padding:8px 11px;margin-bottom:9px}
+  .databar .dstate{flex:1 1 100%}
+  .databar .dsep{display:none}
 
   /* —— 表格转卡片 —— */
   .tablescroll{overflow:visible}
@@ -362,14 +377,14 @@ footer b{color:var(--ink2)}
   .main .tablescroll td:nth-child(7){order:8}
   .main .tablescroll td:nth-child(8){order:3;justify-self:end;align-self:center}
   .main .tablescroll .pbar .track{min-width:0}
-  .dict tbody td:nth-child(1){grid-column:1/-1;order:1}
-  .dict tbody td:nth-child(2){order:2}
-  .dict tbody td:nth-child(3){order:4}
-  .dict tbody td:nth-child(4){order:5}
-  .dict tbody td:nth-child(5){order:6}
-  .dict tbody td:nth-child(6){order:7}
-  .dict tbody td:nth-child(7){grid-column:1/-1;order:8}
-  .dict tbody td:nth-child(8){order:3;justify-self:end;align-self:center}
+  .dict tbody tr{position:relative}
+  .dict tbody td:nth-child(1){grid-column:1/-1}
+  .dict tbody td:nth-child(1) input{width:calc(100% - 42px)}
+  .dict tbody td:nth-child(2){grid-column:1}
+  .dict tbody td:nth-child(3){grid-column:2}
+  .dict tbody td:nth-child(8){grid-column:1/-1}
+  .dict tbody td:nth-child(9){grid-column:1/-1}
+  .dict tbody td:nth-child(10){position:absolute;top:8px;right:10px;z-index:2}
   .dict input.inp.tiny{text-align:left;font-size:16px;min-height:38px}
   .dict .cell-main{font-size:14px}
   .del{font-size:20px;line-height:1;padding:4px 10px;min-height:34px;color:#b8c0cd}
@@ -481,6 +496,7 @@ footer b{color:var(--ink2)}
       <div class="cardhead">
         <h2>工序清单</h2>
         <span class="chip" id="rowCount">0 道工序</span>
+        <span class="chip save" id="saveChip" title="数据保存在本浏览器">✓ 已保存</span>
         <span class="mini">蓝底可填；日工资留空即用默认值</span>
       </div>
       <div class="tablescroll">
@@ -542,13 +558,15 @@ footer b{color:var(--ink2)}
       <table>
         <thead>
           <tr>
-            <th style="width:170px">工序名称</th>
-            <th style="width:118px">工序类别</th>
-            <th style="width:126px">计价方式</th>
-            <th style="width:120px">工序单价（元）</th>
-            <th style="width:96px">计量单位</th>
-            <th style="width:126px">工时定额（秒/件）</th>
-            <th style="width:120px">折算人工成本</th>
+            <th style="width:150px">工序名称</th>
+            <th style="width:92px">工序编号</th>
+            <th style="width:104px">工序类别</th>
+            <th style="width:112px">计价方式</th>
+            <th style="width:110px">工序单价（元）</th>
+            <th style="width:88px">计量单位</th>
+            <th style="width:118px">工时定额（秒/件）</th>
+            <th style="width:112px">折算人工成本</th>
+            <th style="width:190px">备注（拓展信息）</th>
             <th></th>
           </tr>
         </thead>
@@ -562,6 +580,13 @@ footer b{color:var(--ink2)}
   </div>
 
   <footer>
+    <div class="databar">
+      <span class="dstate" id="saveHint">数据自动保存</span>
+      <span class="dsep"></span>
+      <button type="button" class="linkbtn" id="backupBtn">导出数据备份</button>
+      <button type="button" class="linkbtn" id="restoreBtn">导入备份</button>
+      <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+    </div>
     <b>计价规则：</b>计件工序 → 工序成本 = 单套用量 × 字典单价；按工时工序（无单价）→ 日产量 = 日有效工时 ÷ 工时定额，折算单价 = 日工资 ÷ 日产量，工序成本 = 单套用量 × 折算单价。<br>
     <b>口径说明：</b>本工具只核算加工工时成本，不含线材、端子等材料费，也不含设备折旧、返工与制造费用分摊，报价时需另行加计。示例单价为行业参考值，请替换为本厂实际工价后使用。
   </footer>
@@ -580,11 +605,11 @@ footer b{color:var(--ink2)}
     <div class="mhint">本工具是单个本地网页文件，以下每一条你都可以自己验证</div>
     <ul>
       <li><b>全程离线</b>：页面不发起任何网络请求，不加载任何外部脚本、字体、图片或统计代码。断网状态下同样可以完整使用。验证方法：按 F12 打开开发者工具 → Network 面板 → 操作一遍页面，只会看到本机文件，没有任何外部请求。</li>
-      <li><b>数据不出本机</b>：你填写的工序、单价、用量只保存在自己浏览器的本地存储（localStorage）里，不会上传到任何服务器，也没有服务器可上传。</li>
+      <li><b>数据存在本浏览器</b>：工序、单价、用量、备注等只保存在你自己浏览器的本地存储（localStorage）里，关掉页面再打开会自动恢复，不会上传到任何服务器。注意：清除浏览器数据、换设备或换浏览器都会让这些数据消失——重要数据请用页面底部「导出数据备份」存成文件。</li>
       <li><b>导出文件不含宏</b>：导出的 .xlsx / .docx 是纯数据 OOXML 包，没有任何 VBA 宏或可执行代码；.pdf 为图像页。这三种格式本身不是可执行文件，双击只会被 Excel / Word / PDF 阅读器打开。</li>
       <li><b>无任何安装行为</b>：这是 .html 文件，不是 .exe / .msi，双击仅由浏览器打开，不写注册表、不装服务、不修改系统设置。</li>
       <li><b>输入已做转义</b>：所有自定义名称（工序名、型号等）在渲染和导出时都做了 HTML / XML 转义，不会被当作代码执行；导出的表格单元格按纯文本写入，不会被 Excel 当成公式运算。</li>
-      <li class="warnli"><b>关于登录口令（请务必了解）</b>：口令是在你本机浏览器里校验的，用途是挡住无关人员随手打开，<b>不等于密码学意义上的加密保护</b>——文件在你手上，懂技术的人仍可绕过。因此请不要把本文件放到公网或共享盘，也不要连同口令一起转发。</li>
+      <li class="warnli"><b>关于登录口令（请务必了解）</b>：口令是在你本机浏览器里校验的，用途是挡住无关人员随手打开，<b>不等于密码学意义上的加密保护</b>——校验逻辑就写在文件里，懂技术的人可以绕过；若把文件公开托管（例如 GitHub Pages），源码和口令摘要同样公开，6 位纯数字口令可被离线爆破。要真正控制「谁能看」，必须上服务端认证。</li>
       <li class="warnli"><b>来源校验</b>：如果这个文件是别人转发给你的，请确认来源可信。文件是否被人改动过，可用系统自带命令 <code>certutil -hashfile 文件名 SHA256</code> 计算哈希，与来源方提供的值比对。</li>
     </ul>
     <div class="close-row"><button class="mbtn" id="secClose">知道了</button></div>
@@ -664,11 +689,13 @@ footer b{color:var(--ink2)}
         if(!nm) return;
         out.dict.push({
           name: nm,
+          code: safeStr(d.code, 20, ""),
           cat: safeStr(d.cat, 20, "其他"),
           mode: d.mode === "time" ? "time" : "piece",
           price: (d.price == null || d.price === "") ? null : clampNum(d.price, 0, 10000000, 0),
           unit: safeStr(d.unit, 12, "元/件"),
-          secs: clampNum(d.secs, 0, 86400, 10)
+          secs: clampNum(d.secs, 0, 86400, 10),
+          note: safeStr(d.note, 80, "")
         });
       });
     }
@@ -688,12 +715,45 @@ footer b{color:var(--ink2)}
   function load(){
     try{
       var raw = localStorage.getItem(LS);
-      if(!raw) return;
-      var clean = sanitize(JSON.parse(raw));
-      if(clean) state = clean;
-    }catch(e){}
+      if(!raw) return false;
+      var clean = null;
+      try{ clean = sanitize(JSON.parse(raw)); }catch(e1){ clean = null; }
+      if(clean){ state = clean; return true; }
+      /* 结构异常：先留一份原始副本再放弃，避免用户数据被静默覆盖 */
+      try{ localStorage.setItem(LS + ".bak", raw); }catch(e2){}
+      return false;
+    }catch(e){ return false; }
   }
-  function save(){ try{ localStorage.setItem(LS, JSON.stringify(state)); }catch(e){} }
+
+  /* 保存状态提示：已保存 / 存储不可用 */
+  var _saveTimer = null;
+  function markSaved(ok, quiet){
+    var el = $("saveChip");
+    if(!el) return;
+    if(ok){
+      var d = new Date();
+      var hh = ("0" + d.getHours()).slice(-2), mm = ("0" + d.getMinutes()).slice(-2), ss = ("0" + d.getSeconds()).slice(-2);
+      el.textContent = "✓ 已保存 " + hh + ":" + mm + ":" + ss;
+      el.className = "chip save ok";
+      if(_saveTimer) clearTimeout(_saveTimer);
+      _saveTimer = setTimeout(function(){ el.textContent = "✓ 已保存 " + hh + ":" + mm; }, 2500);
+    }else{
+      el.textContent = "⚠ 未能保存";
+      el.className = "chip save bad";
+      if(!quiet) alert("浏览器本地存储不可用（可能是无痕模式或空间已满），本次修改不会被保存。\n\n建议：换用普通窗口打开，或先用底部「导出数据备份」把数据存成文件。");
+    }
+  }
+
+  function save(){
+    /* 未登录时不写盘：否则会用内置示例数据覆盖用户上次保存的真实数据 */
+    if(!authed()) return;
+    try{
+      localStorage.setItem(LS, JSON.stringify(state));
+      markSaved(true);
+    }catch(e){
+      markSaved(false, true);
+    }
+  }
 
   /* ---------- 计算 ---------- */
   function dailySecs(){ return Math.max(1, (Number(state.params.hours)||0) * 3600 * (Number(state.params.eff)||0)); }
@@ -845,6 +905,7 @@ footer b{color:var(--ink2)}
         : ' value="' + (d.price != null ? d.price : "") + '"';
       return '<tr data-drow="' + i + '">'
         + '<td data-lb="工序名称"><input class="inp tiny" style="text-align:left" value="' + esc(d.name) + '" maxlength="40" data-di="' + i + '" data-dk="name"></td>'
+        + '<td data-lb="工序编号"><input class="inp tiny" style="text-align:center" value="' + esc(d.code || "") + '" maxlength="20" placeholder="选填" data-di="' + i + '" data-dk="code"></td>'
         + '<td data-lb="工序类别"><input class="inp tiny" style="text-align:left" value="' + esc(d.cat) + '" maxlength="20" data-di="' + i + '" data-dk="cat"></td>'
         + '<td data-lb="计价方式"><select data-di="' + i + '" data-dk="mode"><option value="piece"' + pieceSel + '>计件单价</option>'
         + '<option value="time"' + timeSel + '>按工时</option></select></td>'
@@ -852,6 +913,7 @@ footer b{color:var(--ink2)}
         + '<td data-lb="计量单位"><input class="inp tiny" value="' + esc(d.unit) + '" maxlength="12" data-di="' + i + '" data-dk="unit"></td>'
         + '<td data-lb="工时定额（秒/件）"><input class="inp tiny" type="number" min="1" step="1" value="' + d.secs + '" data-di="' + i + '" data-dk="secs"></td>'
         + '<td class="convcell" data-lb="折算人工成本">' + convHtml(d) + '</td>'
+        + '<td data-lb="备注（拓展信息）"><input class="inp tiny" style="text-align:left" value="' + esc(d.note || "") + '" maxlength="80" placeholder="设备、工位、良率、外协等" data-di="' + i + '" data-dk="note"></td>'
         + '<td><button class="del" data-ddel="' + i + '" title="删除该工序">×</button></td>'
         + '</tr>';
     }).join("");
@@ -938,7 +1000,7 @@ footer b{color:var(--ink2)}
       state.rows.forEach(function(r){ if(r.name === oldName) r.name = t.value; });
       syncOption(oldName, t.value);
       const sel = $("grid").querySelector('select[data-i="' + idx + '"]');
-    }else if(k === "cat" || k === "unit"){
+    }else if(k === "cat" || k === "unit" || k === "code" || k === "note"){
       d[k] = t.value;
     }else if(k === "price"){
       d.price = (t.value === "" ? null : clampNum(t.value, 0, 10000000, 0));
@@ -961,8 +1023,12 @@ footer b{color:var(--ink2)}
   $("dictBody").addEventListener("click", function(e){
     const b = e.target.closest("[data-ddel]");
     if(!b) return;
-    const nm = state.dict[+b.dataset.ddel].name;
-    state.dict.splice(+b.dataset.ddel, 1);
+    const idx = +b.dataset.ddel;
+    const nm = state.dict[idx].name;
+    const used = state.rows.filter(function(r){ return r.name === nm; }).length;
+    if(used && !confirm("删除工序「" + nm + "」？\n工序清单中引用它的 " + used + " 行也会一起删除。"))
+      return;
+    state.dict.splice(idx, 1);
     state.rows = state.rows.filter(function(r){ return r.name !== nm; });
     refresh();
   });
@@ -977,14 +1043,31 @@ footer b{color:var(--ink2)}
     if(rows.length) rows[rows.length - 1].scrollIntoView({block:"nearest", behavior:"smooth"});
   });
 
+  function expandDict(){
+    var wrap = document.querySelector(".dict");
+    if(wrap && wrap.classList.contains("collapsed")){
+      wrap.classList.remove("collapsed");
+      var tg = $("dictTgl");
+      if(tg){ tg.textContent = "收起"; tg.setAttribute("aria-expanded", "true"); }
+    }
+  }
+
   $("addDictBtn").addEventListener("click", function(){
-    state.dict.push({name:"新工序" + (state.dict.length + 1), cat:"其他", mode:"piece", price:0.1, unit:"元/处", secs:10});
+    state.dict.push({
+      name: "新工序" + (state.dict.length + 1),
+      code: "", cat: "其他", mode: "piece", price: 0.1, unit: "元/处", secs: 10, note: ""
+    });
+    expandDict();
     refresh();
-    document.querySelector(".dict").scrollIntoView({behavior:"smooth", block:"start"});
+    var wrap = document.querySelector(".dict");
+    if(wrap) wrap.scrollIntoView({behavior: "smooth", block: "start"});
+    /* 直接聚焦新行的名称输入框，改完回车即可 */
+    var last = $("dictBody").querySelector('tr[data-drow="' + (state.dict.length - 1) + '"] input[data-dk="name"]');
+    if(last){ try{ last.focus(); last.select(); }catch(e){} }
   });
 
   $("resetBtn").addEventListener("click", function(){
-    if(!confirm("确定恢复到示例数据？当前修改将丢失。")) return;
+    if(!confirm("确定恢复到示例数据？当前修改将丢失（建议先用底部「导出数据备份」留一份）。")) return;
     state = {
       params: Object.assign({}, DEF_PARAMS),
       dict: JSON.parse(JSON.stringify(DEF_DICT)),
@@ -1009,9 +1092,72 @@ footer b{color:var(--ink2)}
   function authed(){
     try{ return sessionStorage.getItem("wh-sess-v1") === "ok"; }catch(e){ return false; }
   }
-  if(authed()) load();
+
+  function bootHint(restored){
+    var el = $("saveHint");
+    if(!el) return;
+    el.textContent = restored
+      ? "已恢复上次保存的数据 · 每次修改自动存到本浏览器"
+      : "数据自动保存在本浏览器";
+    el.className = restored ? "dstate ok" : "dstate";
+  }
+
+  var restored = false;
+  if(authed()) restored = load();
   syncInputs();
   refresh();
+  bootHint(restored);
+
+  /* ---------- 数据备份 / 导入 ---------- */
+  function stampName(){
+    var d = new Date(), p = function(n){ return ("0" + n).slice(-2); };
+    return "线束工序成本-数据备份-" + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate())
+         + "-" + p(d.getHours()) + p(d.getMinutes()) + ".json";
+  }
+
+  $("backupBtn").addEventListener("click", function(){
+    var payload = {
+      app: "harness-cost-calculator",
+      version: 1,
+      savedAt: new Date().toISOString(),
+      state: state
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url; a.download = stampName();
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+  });
+
+  $("restoreBtn").addEventListener("click", function(){ $("restoreFile").click(); });
+
+  $("restoreFile").addEventListener("change", function(){
+    var f = this.files && this.files[0];
+    if(!f) return;
+    if(f.size > 2097152){ alert("备份文件超过 2MB，已拒绝读取。"); this.value = ""; return; }
+    var rd = new FileReader();
+    rd.onload = function(){
+      var clean = null;
+      try{
+        var o = JSON.parse(String(rd.result));
+        clean = sanitize(o && o.state ? o.state : o);
+      }catch(e){ clean = null; }
+      if(!clean || (!clean.dict.length && !clean.rows.length)){
+        alert("备份文件内容无法识别，未做任何修改。"); return;
+      }
+      if(!confirm("导入后会用备份覆盖当前数据：\n\n产品：" + clean.params.name
+        + "\n工序字典 " + clean.dict.length + " 条 ／ 工序清单 " + clean.rows.length + " 行\n\n确定继续？")) return;
+      state = clean;
+      syncInputs();
+      refresh();
+      bootHint(true);
+      alert("导入成功，已保存到本浏览器。");
+    };
+    rd.onerror = function(){ alert("文件读取失败，请重试。"); };
+    rd.readAsText(f, "utf-8");
+    this.value = "";
+  });
 
   /* ---------- 窄屏：工序单价字典默认收起 ---------- */
   (function(){
@@ -1034,7 +1180,7 @@ footer b{color:var(--ink2)}
     get state(){ return state; },
     calc: calc,
     dailySecs: dailySecs,
-    reload: function(){ load(); syncInputs(); refresh(); }
+    reload: function(){ var ok = load(); syncInputs(); refresh(); bootHint(ok); }
   };
 })();
 
@@ -1203,12 +1349,14 @@ footer b{color:var(--ink2)}
       return {
         no: i + 1,
         name: d.name,
+        code: d.code || "",
         cat: d.cat,
         mode: d.mode === "piece" ? "计件单价" : "按工时",
         price: d.mode === "piece" ? (Number(d.price) || 0) : 0,
         unit: d.unit,
         secs: d.secs,
-        conv: conv
+        conv: conv,
+        note: d.note || ""
       };
     });
 
@@ -1425,22 +1573,24 @@ footer b{color:var(--ink2)}
       main.rows.push({ h: 18, cells: [{ v: n, s: S.NOTE, span: 9 }] });
     });
 
-    var dict = { cols: [5.5, 16, 12, 11, 13, 10, 14, 13], rows: [] };
-    dict.rows.push({ h: 30, cells: [{ v: "工序单价字典", s: S.TITLE, span: 8 }] });
+    var dict = { cols: [5.5, 15, 9, 11, 11, 12, 9, 13, 12, 24], rows: [] };
+    dict.rows.push({ h: 30, cells: [{ v: "工序单价字典", s: S.TITLE, span: 10 }] });
     dict.rows.push({ h: 8, cells: [{ v: "", s: S.DEF }] });
     dict.rows.push({
       h: 26, cells: [
-        { v: "序号", s: S.HEAD }, { v: "工序名称", s: S.HEAD }, { v: "工序类别", s: S.HEAD },
-        { v: "计价方式", s: S.HEAD }, { v: "工序单价（元）", s: S.HEAD }, { v: "计量单位", s: S.HEAD },
-        { v: "工时定额（秒/件）", s: S.HEAD }, { v: "折算人工成本（元）", s: S.HEAD }
+        { v: "序号", s: S.HEAD }, { v: "工序名称", s: S.HEAD }, { v: "工序编号", s: S.HEAD },
+        { v: "工序类别", s: S.HEAD }, { v: "计价方式", s: S.HEAD }, { v: "工序单价（元）", s: S.HEAD },
+        { v: "计量单位", s: S.HEAD }, { v: "工时定额（秒/件）", s: S.HEAD },
+        { v: "折算人工成本（元）", s: S.HEAD }, { v: "备注（拓展信息）", s: S.HEAD }
       ]
     });
     m.dict.forEach(function (d) {
       dict.rows.push({
         h: 20, cells: [
-          { v: d.no, s: S.CTR }, { v: d.name, s: S.TXT }, { v: d.cat, s: S.CTR },
-          { v: d.mode, s: S.CTR }, { v: d.price, s: S.PRICE }, { v: d.unit, s: S.CTR },
-          { v: d.secs, s: S.CTR }, { v: d.conv, s: S.PRICE }
+          { v: d.no, s: S.CTR }, { v: d.name, s: S.TXT }, { v: d.code, s: S.CTR },
+          { v: d.cat, s: S.CTR }, { v: d.mode, s: S.CTR }, { v: d.price, s: S.PRICE },
+          { v: d.unit, s: S.CTR }, { v: d.secs, s: S.CTR }, { v: d.conv, s: S.PRICE },
+          { v: d.note, s: S.TXT }
         ]
       });
     });
