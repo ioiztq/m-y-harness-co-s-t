@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#2f5597">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%232f5597'/%3E%3Ctext x='16' y='23' font-size='19' font-family='Helvetica,Arial,sans-serif' font-weight='700' fill='%23ffffff' text-anchor='middle'%3E%C2%A5%3C/text%3E%3C/svg%3E">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'">
 <title>线束工序成本计算器</title>
 <style>
 :root{
@@ -86,7 +86,7 @@ h1{font-size:20px;font-weight:650;letter-spacing:.3px}
 .cardhead .mini{margin-left:auto;font-size:11.5px;color:var(--muted)}
 
 .tablescroll{overflow-x:auto}
-table{width:100%;border-collapse:separate;border-spacing:0;min-width:820px}
+table{width:100%;border-collapse:separate;border-spacing:0;min-width:848px}
 thead th{
   font-size:11.5px;font-weight:600;color:var(--muted);text-align:left;
   padding:9px 10px;background:#fafbfd;border-bottom:1px solid var(--line);
@@ -114,6 +114,18 @@ select:focus,input.inp:focus{border-color:var(--pri2);box-shadow:0 0 0 3px rgba(
 input.inp{text-align:right;background:var(--priXL)}
 input.inp:focus{background:#fff}
 input.inp::placeholder{color:#c8d0dc;font-weight:400}
+input.inp:disabled{background:#f4f7fb;color:var(--muted);cursor:not-allowed;opacity:1;-webkit-text-fill-color:var(--muted)}
+
+/* 日工资：默认 / 自定 两态切换 */
+.wcell{display:flex;align-items:center;gap:4px}
+.wcell input.inp{flex:1 1 auto;min-width:0;width:auto}
+.wtog{
+  flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--muted);
+  font-family:inherit;font-size:10px;font-weight:700;padding:5px 6px;border-radius:6px;
+  cursor:pointer;white-space:nowrap;line-height:1.15;transition:.15s;
+}
+.wtog.on{background:var(--okL);border-color:#c6e6d4;color:var(--ok)}
+.wtog:hover{border-color:var(--pri2);color:var(--pri)}
 
 .badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap}
 .badge.piece{background:var(--priL);color:var(--pri)}
@@ -191,8 +203,26 @@ footer b{color:var(--ink2)}
 }
 .databar .dstate{color:var(--muted);font-weight:600}
 .databar .dstate.ok{color:var(--ok)}
+.databar .dstate.sync{margin-left:auto;white-space:nowrap}
+.databar .dstate.sync.ok{color:var(--ok)}
+.databar .dstate.sync.err{color:var(--hot)}
 .databar .dsep{width:1px;height:12px;background:var(--line)}
 .databar .linkbtn{font-size:11.5px;font-weight:600;color:var(--pri2)}
+
+/* 云同步弹层 */
+.sync-card{max-width:540px}
+.mbtn.ghost{background:#fff;color:var(--ink2);border:1px solid var(--line)}
+.mbtn.ghost:hover{background:#f6f8fc;color:var(--pri)}
+.modal-card .close-row{gap:8px}
+.syncdoc{margin:0 0 14px;font-size:11.5px;color:var(--ink2)}
+.syncdoc summary{cursor:pointer;color:var(--pri2);font-weight:600;padding:3px 0;outline:none}
+.syncdoc ol{padding-left:18px;line-height:1.7;margin:6px 0}
+.syncdoc li{margin-bottom:4px}
+.syncdoc pre{
+  background:#f2f5fa;border:1px solid var(--line);border-radius:8px;padding:9px 11px;
+  font-size:10.5px;line-height:1.55;overflow:auto;color:#1f3864;white-space:pre;margin:6px 0;
+  font-family:Consolas,Menlo,monospace;
+}
 
 @page{size:A4 landscape;margin:10mm}
 @media print{
@@ -316,67 +346,87 @@ footer b{color:var(--ink2)}
 /* ===== 手机 / 窄屏适配（不影响打印） ===== */
 @media screen and (max-width:760px){
   html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
-  body{padding-bottom:78px;font-size:13.5px}
-  .wrap{padding:0 12px}
-  header{padding:16px 14px 20px}
-  h1{font-size:17px;line-height:1.35}
-  .sub{font-size:11.5px;margin-top:4px;line-height:1.5}
-  .hactions{width:100%;margin-left:0;flex-wrap:wrap;gap:6px;justify-content:center}
+  body{padding-bottom:74px;font-size:13px}
+  .wrap{padding:0 10px}
+  header{padding:9px 10px 10px}
+  h1{font-size:15px;line-height:1.25}
+  .sub{display:none}
+  .hactions{width:100%;margin-left:0;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:5px}
   .hactions .hsep{display:none}
-  .hactions .btn{flex:1 1 calc(33.333% - 6px);max-width:calc(33.333% - 6px);min-width:0;min-height:38px;padding:8px 2px;font-size:11.5px;border-radius:7px;white-space:nowrap}
-  .topbar{margin-top:-10px;padding:12px;gap:10px}
-  .topbar .field:first-child{flex:1 1 100%}
-  .field{flex:1 1 calc(50% - 5px);min-width:0}
+  .hactions .btn{flex:1 1 calc(25% - 5px);max-width:calc(25% - 5px);min-width:0;min-height:30px;padding:4px 1px;font-size:10px;border-radius:6px;white-space:nowrap}
+  .topbar{margin-top:-7px;padding:8px 9px;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px 6px;align-items:end}
+  .topbar .field:nth-child(1),.topbar .field:nth-child(2){grid-column:span 3}
+  .topbar .field:nth-child(3),.topbar .field:nth-child(4),.topbar .field:nth-child(5){grid-column:span 2}
+  .field{min-width:0;gap:2px}
+  .field label{font-size:9.5px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .field input,.field input.w120,.field input.w90,.field input.w70{width:100%}
-  .field input{font-size:16px;padding:8px 10px}
-  .derive{width:100%;margin-left:0;justify-content:space-between;padding:8px 12px;font-size:12px}
-  .main{margin-top:12px;gap:12px}
-  .cardhead{padding:12px 12px 10px;flex-wrap:wrap;gap:7px}
+  .field input{font-size:16px;padding:4px 8px;min-height:31px}
+  .derive{grid-column:1/-1;width:100%;margin-left:0;margin-top:1px;justify-content:space-between;padding:4px 9px;font-size:11px}
+  .derive b{font-size:13px}
+  .main{margin-top:8px;gap:8px}
+  .cardhead{padding:8px 9px 7px;flex-wrap:wrap;gap:3px 6px}
   .cardhead .mini{display:none}
-  .tgl{display:inline-block;margin-left:auto;min-height:32px;padding:6px 14px;font-size:12px}
-  .sum{padding:14px}
-  .sum .big{font-size:30px}
-  .sum .row{padding:8px 0;font-size:12.5px}
-  .hotcard{padding:14px}
-  .hotcard .hname{font-size:20px}
-  .rank{padding:14px}
-  footer{padding:0 14px;font-size:11px;margin-top:16px}
-  .databar{gap:8px;padding:8px 11px;margin-bottom:9px}
-  .databar .dstate{flex:1 1 100%}
+  .cardhead h2{font-size:13px}
+  .chip{font-size:10.5px;padding:2px 8px}
+  .tgl{display:inline-block;margin-left:auto;min-height:30px;padding:5px 12px;font-size:11.5px}
+  .sum{padding:12px}
+  .sum .big{font-size:28px}
+  .sum .row{padding:6px 0;font-size:12px}
+  .sum .row b{font-size:13px}
+  .hotcard{padding:12px}
+  .hotcard .hname{font-size:19px;margin:4px 0 1px}
+  .hotcard .tip{display:none}
+  .rank{padding:12px}
+  .rank h3{margin-bottom:9px}
+  .rline{margin-bottom:7px}
+  footer{padding:0 12px;font-size:10.5px;margin-top:14px}
+  .databar{gap:7px;padding:7px 10px;margin-bottom:8px;font-size:11px}
+  .databar #saveHint{flex:1 1 100%}
   .databar .dsep{display:none}
 
-  /* —— 表格转卡片 —— */
+  /* —— 工序清单：转卡片（紧凑三列） —— */
   .tablescroll{overflow:visible}
   .main .tablescroll table,.dict table{min-width:0;display:block;width:100%}
   .main .tablescroll thead,.dict thead{display:none}
   .main .tablescroll tbody,.dict tbody{display:block}
-  .main .tablescroll tbody tr,.dict tbody tr{
-    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
-    gap:8px 10px;padding:11px 12px 12px;border-bottom:1px solid var(--line);
-    border-left:3px solid transparent;
+  .main .tablescroll tbody tr{
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:3px 7px;padding:6px 9px 7px;border-bottom:1px solid var(--line);
+    border-left:3px solid transparent;align-items:center;
   }
   .main .tablescroll tbody tr.hot{border-left-color:var(--hot);box-shadow:none}
   .main .tablescroll tbody tr.warnrow{border-left-color:#e0b252;box-shadow:none}
   .main .tablescroll tbody td,.dict tbody td{display:block;padding:0!important;border:none;min-width:0}
   .main .tablescroll tbody td[data-lb]::before,.dict tbody td[data-lb]::before{
-    content:attr(data-lb);display:block;font-size:10.5px;color:var(--muted);font-weight:600;
-    margin-bottom:4px;letter-spacing:.2px;
+    content:attr(data-lb);display:block;font-size:9px;color:var(--muted);font-weight:600;
+    margin-bottom:1px;letter-spacing:.2px;line-height:1.15;
   }
   .main .tablescroll tbody td[colspan]{grid-column:1/-1;text-align:center}
   .main .tablescroll select,.main .tablescroll input.inp,
-  .dict select,.dict input.inp{font-size:16px;min-height:38px;padding:7px 9px}
-  .main .tablescroll select{background-position:right 8px center;padding-right:26px}
-  .main .tablescroll .cost{font-size:16px}
-  .main .tablescroll .cell-sub{white-space:normal;font-size:10px;line-height:1.4}
-  .main .tablescroll td:nth-child(1){grid-column:1/-1;order:1}
-  .main .tablescroll td:nth-child(2){order:2;align-self:center}
-  .main .tablescroll td:nth-child(3){grid-column:1/-1;order:4}
+  .dict select,.dict input.inp{font-size:16px;min-height:30px;padding:4px 7px}
+  .main .tablescroll select{background-position:right 7px center;padding-right:24px}
+  .main .tablescroll .cell-main{display:inline-block;font-size:13px;font-weight:650;margin-right:5px}
+  .main .tablescroll .cell-sub{display:inline-block;white-space:normal;font-size:9.5px;line-height:1.3;margin-top:0;vertical-align:1px}
+  /* 1 工序 | 6 成本 / 3 单价明细 | 2 计价方式 / 4 用量 5 日工资 8 删除 / 7 占比 */
+  .main .tablescroll td:nth-child(1){grid-column:1/3;order:1}
+  .main .tablescroll td:nth-child(6){grid-column:3;order:2;text-align:right}
+  .main .tablescroll td:nth-child(6)::before{text-align:right;margin-bottom:1px}
+  .main .tablescroll td:nth-child(6) .cost{font-size:15px;letter-spacing:-.2px}
+  .main .tablescroll td:nth-child(3){grid-column:1/3;order:3}
+  .main .tablescroll td:nth-child(2){grid-column:3;order:4;justify-self:end;align-self:center}
+  .main .tablescroll td:nth-child(2)::before{display:none}
   .main .tablescroll td:nth-child(4){order:5}
   .main .tablescroll td:nth-child(5){order:6}
-  .main .tablescroll td:nth-child(6){order:7}
-  .main .tablescroll td:nth-child(7){order:8}
-  .main .tablescroll td:nth-child(8){order:3;justify-self:end;align-self:center}
-  .main .tablescroll .pbar .track{min-width:0}
+  .main .tablescroll td:nth-child(8){order:7;justify-self:end}
+  .main .tablescroll td:nth-child(7){grid-column:1/-1;order:8;display:flex;align-items:center;gap:6px}
+  .main .tablescroll td:nth-child(7)::before{margin:0;flex:0 0 auto}
+  .main .tablescroll td:nth-child(7) .pbar{flex:1;min-width:0}
+  .main .tablescroll .pbar .track{min-width:0;height:5px}
+  .main .tablescroll .wcell{gap:3px}
+  .main .tablescroll .wtog{font-size:9.5px;padding:0 5px;height:30px;border-radius:5px}
+  .main .tablescroll .cell-main{font-size:12.5px;margin-right:4px}
+  .main .tablescroll .cell-sub{font-size:9px;line-height:1.2}
+  .badge{font-size:10px;padding:1px 7px}
   .dict tbody tr{position:relative}
   .dict tbody td:nth-child(1){grid-column:1/-1}
   .dict tbody td:nth-child(1) input{width:calc(100% - 42px)}
@@ -413,9 +463,13 @@ footer b{color:var(--ink2)}
   .modal-card li{font-size:12px;line-height:1.7}
 }
 @media screen and (max-width:380px){
-  .hactions .btn{flex:1 1 calc(50% - 6px)}
-  h1{font-size:16px}
-  .main .tablescroll tbody tr,.dict tbody tr{gap:8px}
+  .hactions .btn{flex:1 1 calc(25% - 4px);max-width:calc(25% - 4px);font-size:9.5px;min-height:29px;padding:4px 0}
+  h1{font-size:14.5px}
+  .topbar .lbx{display:none}
+  .main .tablescroll .wtog{font-size:8.5px;padding:0 4px;height:28px;letter-spacing:-.3px}
+  .main .tablescroll .wcell{gap:2px}
+  .main .tablescroll .wcell input.inp{padding:4px 4px}
+  .main .tablescroll tbody tr,.dict tbody tr{gap:3px 6px}
 }
 </style>
 </head>
@@ -429,7 +483,7 @@ footer b{color:var(--ink2)}
     <div class="gate-sub">请填写账号与密码后使用</div>
     <form id="loginForm" autocomplete="off" novalidate>
       <label class="gfield"><span>账号</span>
-        <input id="gUser" type="text" inputmode="numeric" maxlength="32" autocomplete="off" spellcheck="false" placeholder="请输入账号">
+        <input id="gUser" type="text" inputmode="text" autocapitalize="characters" maxlength="32" autocomplete="off" spellcheck="false" placeholder="请输入账号">
       </label>
       <label class="gfield"><span>密码</span>
         <input id="gPass" type="password" maxlength="64" autocomplete="off" placeholder="请输入密码">
@@ -470,15 +524,15 @@ footer b{color:var(--ink2)}
       <input class="w120" id="pName" maxlength="60" value="HX-2401 发动机线束总成">
     </div>
     <div class="field">
-      <label>批量（套）</label>
+      <label>批量<span class="lbx">（套）</span></label>
       <input class="w90 num" id="pBatch" type="number" min="0" step="1" value="1000">
     </div>
     <div class="field">
-      <label>默认员工日工资（元）</label>
+      <label>默认员工日工资<span class="lbx">（元）</span></label>
       <input class="w90 num" id="pWage" type="number" min="0" step="10" value="220">
     </div>
     <div class="field">
-      <label>每日工作（小时）</label>
+      <label>每日工作<span class="lbx">（小时）</span></label>
       <input class="w70 num" id="pHours" type="number" min="1" max="24" step="0.5" value="8">
     </div>
     <div class="field">
@@ -507,9 +561,9 @@ footer b{color:var(--ink2)}
               <th style="width:86px">计价方式</th>
               <th style="width:112px">单价（元）</th>
               <th style="width:92px">单套用量</th>
-              <th style="width:104px">日工资（元）</th>
+              <th style="width:128px">日工资（元）</th>
               <th style="width:110px">工序成本（元）</th>
-              <th style="width:162px">占单套成本</th>
+              <th style="width:146px">占单套成本</th>
               <th style="width:44px"></th>
             </tr>
           </thead>
@@ -585,6 +639,9 @@ footer b{color:var(--ink2)}
       <span class="dsep"></span>
       <button type="button" class="linkbtn" id="backupBtn">导出数据备份</button>
       <button type="button" class="linkbtn" id="restoreBtn">导入备份</button>
+      <span class="dsep"></span>
+      <button type="button" class="linkbtn" id="syncBtn">云同步</button>
+      <span class="dstate sync" id="syncState">☁ 未启用</span>
       <input type="file" id="restoreFile" accept=".json,application/json" hidden>
     </div>
     <b>计价规则：</b>计件工序 → 工序成本 = 单套用量 × 字典单价；按工时工序（无单价）→ 日产量 = 日有效工时 ÷ 工时定额，折算单价 = 日工资 ÷ 日产量，工序成本 = 单套用量 × 折算单价。<br>
@@ -613,6 +670,47 @@ footer b{color:var(--ink2)}
       <li class="warnli"><b>来源校验</b>：如果这个文件是别人转发给你的，请确认来源可信。文件是否被人改动过，可用系统自带命令 <code>certutil -hashfile 文件名 SHA256</code> 计算哈希，与来源方提供的值比对。</li>
     </ul>
     <div class="close-row"><button class="mbtn" id="secClose">知道了</button></div>
+  </div>
+</div>
+
+<div class="modal" id="syncModal">
+  <div class="modal-card sync-card">
+    <h3>云端同步设置</h3>
+    <div class="mhint">填一次即可，之后每次修改都会自动同步到手机和电脑（约 2 秒）。密钥只存在本机浏览器，不写进网页文件。</div>
+    <label class="gfield"><span>项目地址 Project URL</span>
+      <input id="syncUrl" type="url" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="https://xxxx.supabase.co" maxlength="200">
+    </label>
+    <label class="gfield"><span>anon 公钥 anon public key</span>
+      <input id="syncKey" type="text" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="eyJhbGciOiJIUzI1NiIs..." maxlength="500">
+    </label>
+    <label class="gfield"><span>同步通道（同一份数据用同一个名字）</span>
+      <input id="syncCh" type="text" spellcheck="false" autocapitalize="off" autocomplete="off" value="default" maxlength="32" placeholder="default">
+    </label>
+    <div class="gerr" id="syncErr"></div>
+    <details class="syncdoc">
+      <summary>首次使用？点这里看 3 步配置说明</summary>
+      <ol>
+        <li>注册 <b>supabase.com</b>（免费）→ New project，等 1 分钟建好。</li>
+        <li>左侧 <b>SQL Editor</b>，粘贴下面这段并 Run：</li>
+      </ol>
+      <pre>create table if not exists public.shared_state (
+  id text primary key,
+  payload jsonb not null,
+  rev bigint not null default 1,
+  updated_at timestamptz not null default now()
+);
+alter table public.shared_state enable row level security;
+create policy "shared rw" on public.shared_state
+  for all to anon using (true) with check (true);
+grant all on public.shared_state to anon;</pre>
+      <ol start="3">
+        <li>左侧 <b>Project Settings → API</b>，复制 <b>Project URL</b> 和 <b>anon public</b> 两条，粘到上面保存。</li>
+      </ol>
+    </details>
+    <div class="close-row">
+      <button type="button" class="mbtn ghost" id="syncOff">断开同步</button>
+      <button type="button" class="mbtn" id="syncSave">测试并保存</button>
+    </div>
   </div>
 </div>
 
@@ -753,6 +851,8 @@ footer b{color:var(--ink2)}
     }catch(e){
       markSaved(false, true);
     }
+    /* 通知云同步模块（若已启用） */
+    try{ if(window.WHApp && window.WHApp.saveHook) window.WHApp.saveHook(); }catch(e2){}
   }
 
   /* ---------- 计算 ---------- */
@@ -773,7 +873,7 @@ footer b{color:var(--ink2)}
           unit = Number(d.price) || 0;
           if(unit > 0){
             cls = "piece";
-            note = unit.toFixed(3) + " " + d.unit + "（字典价）";
+            note = d.unit + " · 字典价";
           }else{
             cls = "missing";
             note = "字典未填单价 · 待定价";
@@ -821,12 +921,18 @@ footer b{color:var(--ink2)}
         const opts = '<option value="">— 选择工序 —</option>' + state.dict.map(d =>
           '<option value="' + esc(d.name) + '"' + (d.name === x.name ? " selected" : "") + '>' + esc(d.name) + '</option>').join("");
         const pct = res.total > 0 ? x.cost / res.total : 0;
+        /* 原始值："" 表示该行沿用默认日工资（x.wage 是解析后的数值，不能用） */
+        const rw = (state.rows[idx] && state.rows[idx].wage !== "" && state.rows[idx].wage != null)
+          ? state.rows[idx].wage : "";
         return '<tr data-row="' + idx + '" class="' + (idx === res.hotIdx ? "hot" : "") + (x.cls === "missing" ? " warnrow" : "") + '">'
           + '<td data-lb="工序"><select data-i="' + idx + '" data-k="name">' + opts + '</select></td>'
           + '<td>' + rowBadge(x) + '</td>'
           + '<td data-lb="单价（元）">' + rowUnitHtml(x) + '</td>'
-          + '<td data-lb="单套用量"><input class="inp" type="number" min="0" max="1000000" step="1" value="' + x.qty + '" data-i="' + idx + '" data-k="qty"></td>'
-          + '<td data-lb="日工资（元）"><input class="inp" type="number" min="0" max="10000000" step="10" value="' + (x.wage === "" ? "" : x.wage) + '" placeholder="' + state.params.wage + '" data-i="' + idx + '" data-k="wage" title="留空即用默认日工资"></td>'
+          + '<td data-lb="单套用量"><input class="inp" type="number" inputmode="numeric" min="0" max="1000000" step="1" value="' + x.qty + '" data-i="' + idx + '" data-k="qty"></td>'
+          + '<td data-lb="日工资（元）"><div class="wcell">'
+          +   '<input class="inp" type="number" inputmode="decimal" min="0" max="10000000" step="10" value="' + rw + '" placeholder="' + state.params.wage + '" data-i="' + idx + '" data-k="wage"' + (rw === "" ? " disabled" : "") + ' title="' + (rw === "" ? "当前使用默认日工资" : "该工序单独设定的日工资") + '">'
+          +   '<button type="button" class="wtog' + (rw === "" ? " on" : "") + '" data-wtog="' + idx + '" title="' + (rw === "" ? "点击改为单独设置" : "点击恢复默认日工资") + '">' + (rw === "" ? "默认" : "自定") + '</button>'
+          + '</div></td>'
           + '<td data-lb="工序成本（元）"><span class="cost">' + x.cost.toFixed(2) + '</span></td>'
           + '<td data-lb="占单套成本">' + pbarHtml(pct) + '</td>'
           + '<td><button class="del" data-del="' + idx + '" title="删除该行">×</button></td>'
@@ -848,6 +954,9 @@ footer b{color:var(--ink2)}
       td[2].innerHTML = rowUnitHtml(x);
       td[5].innerHTML = '<span class="cost">' + x.cost.toFixed(2) + '</span>';
       td[6].innerHTML = pbarHtml(res.total > 0 ? x.cost / res.total : 0);
+      /* 默认日工资被改过时，占位提示跟着变 */
+      const wi = td[4].querySelector('input[data-k="wage"]');
+      if(wi) wi.placeholder = state.params.wage;
     });
   }
 
@@ -981,6 +1090,19 @@ footer b{color:var(--ink2)}
   });
 
   $("grid").addEventListener("click", function(e){
+    /* 日工资：默认 ⇄ 自定 */
+    const w = e.target.closest("[data-wtog]");
+    if(w){
+      const i = +w.dataset.wtog;
+      const r = state.rows[i];
+      if(!r) return;
+      if(r.wage === "") r.wage = Number(state.params.wage) || 0;  /* 切自定：先带入默认值 */
+      else r.wage = "";                                           /* 切默认 */
+      refresh();
+      const el = $("grid").querySelector('input[data-i="' + i + '"][data-k="wage"]');
+      if(el && r.wage !== ""){ try{ el.focus(); el.select(); }catch(err){} }
+      return;
+    }
     const b = e.target.closest("[data-del]");
     if(!b) return;
     state.rows.splice(+b.dataset.del, 1);
@@ -1180,6 +1302,18 @@ footer b{color:var(--ink2)}
     get state(){ return state; },
     calc: calc,
     dailySecs: dailySecs,
+    authed: authed,
+    saveHook: null,
+    /* 同步模块拉回远端数据后写入 */
+    applyRemote: function(obj){
+      var clean = sanitize(obj);
+      if(!clean) return null;
+      state = clean;
+      syncInputs();
+      refresh();
+      bootHint(true);
+      return clean;
+    },
     reload: function(){ var ok = load(); syncInputs(); refresh(); bootHint(ok); }
   };
 })();
@@ -2156,9 +2290,9 @@ footer b{color:var(--ink2)}
   var SALT = "wh-cost-v1";
   /* 每条为用户口令的 SHA-256 摘要（不存明文）；同一账号可登记多个等价口令 */
   var USERS = {
-    "123456": [
-      "53eeb22b7d9382f43f6f13aba7a01238f430fa0128466d9c11d200d15f291b84",
-      "74dce7d333d66722952f1a07581596349dc8809e97d6f1ac0f630f23968f5b37"
+    "CBHS123456": [
+      "b3519e754fd38655b67e13c1e5d879760732c8497c12ee1798c39a0ae434a7a9",
+      "0c07cb280396d7d854ac280a93703e84f5b420dbe294f834b9bb2c39f85af231"
     ]
   };
   var SESS = "wh-sess-v1", SESS_VAL = "ok";
@@ -2256,6 +2390,7 @@ footer b{color:var(--ink2)}
     $("gate").classList.remove("on");
     $("app").removeAttribute("hidden");
     if (needReload !== false && window.WHApp && window.WHApp.reload) window.WHApp.reload();
+    try { document.dispatchEvent(new CustomEvent("wh:login")); } catch (e) {}
   }
 
   function leave() {
@@ -2298,6 +2433,11 @@ footer b{color:var(--ink2)}
   $("loginForm").addEventListener("submit", function (ev) {
     ev.preventDefault();
     var u = $("gUser").value.trim();
+    /* 账号不区分大小写：先归一化到 USERS 里的规范写法，再用规范账号参与摘要 */
+    if (u && !USERS[u]) {
+      var lc = u.toLowerCase();
+      for (var k in USERS) { if (k.toLowerCase() === lc) { u = k; break; } }
+    }
     var pw = $("gPass").value;
     var lk = readLock();
 
@@ -2354,6 +2494,248 @@ footer b{color:var(--ink2)}
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSec(); });
 })();
 
+</script>
+
+<script>
+/* ============================================================
+   云同步模块（Supabase PostgREST）
+   表格：public.shared_state  (id text pk, payload jsonb, rev bigint, updated_at)
+   策略：单文档 + 版本号乐观锁，最后写入者胜；轮询 3 秒拉取
+   ============================================================ */
+(function () {
+  "use strict";
+  if (!window.fetch || !window.Promise) return;
+
+  var CFG_KEY = "wh-sync-cfg-v1", REV_KEY = "wh-sync-rev-v1";
+  var $ = function (id) { return document.getElementById(id); };
+  var cfg = null, rev = 0, applying = false, pushing = false;
+  var pushTimer = null, pollTimer = null, lastSent = "", started = false;
+
+  function loadCfg() {
+    try {
+      var o = JSON.parse(localStorage.getItem(CFG_KEY) || "null");
+      if (o && o.url && o.key) cfg = { url: o.url, key: o.key, channel: o.channel || "default" };
+    } catch (e) { cfg = null; }
+  }
+  function storeCfg() { try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch (e) {} }
+  function loadRev() { try { rev = Number(localStorage.getItem(REV_KEY) || 0) || 0; } catch (e) { rev = 0; } }
+  function storeRev() { try { localStorage.setItem(REV_KEY, String(rev)); } catch (e) {} }
+
+  function base() { return cfg.url.replace(/\/+$/, "").replace(/\/rest\/v1$/, "") + "/rest/v1/shared_state"; }
+  function ch() { return encodeURIComponent(cfg.channel || "default"); }
+  function hdr(extra) {
+    var h = { "apikey": cfg.key, "Authorization": "Bearer " + cfg.key, "Content-Type": "application/json" };
+    if (extra) for (var k in extra) h[k] = extra[k];
+    return h;
+  }
+  function hhmm() {
+    var d = new Date(), p = function (n) { return ("0" + n).slice(-2); };
+    return p(d.getHours()) + ":" + p(d.getMinutes());
+  }
+  function badge(text, cls) {
+    var el = $("syncState");
+    if (!el) return;
+    el.textContent = text;
+    el.className = "dstate sync" + (cls ? " " + cls : "");
+  }
+
+  /* ---------- 远端读写 ---------- */
+  function pull() {
+    return fetch(base() + "?id=eq." + ch() + "&select=rev,payload,updated_at", {
+      headers: hdr(), cache: "no-store"
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function (rows) {
+      return (Array.isArray(rows) && rows.length) ? rows[0] : null;
+    });
+  }
+
+  function create(payload) {
+    return fetch(base(), {
+      method: "POST",
+      headers: hdr({ "Prefer": "return=representation" }),
+      body: JSON.stringify({ id: cfg.channel || "default", payload: payload, rev: 1, updated_at: new Date().toISOString() })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    });
+  }
+
+  function patch(payload) {
+    return fetch(base() + "?id=eq." + ch() + "&rev=eq." + rev, {
+      method: "PATCH",
+      headers: hdr({ "Prefer": "return=representation" }),
+      body: JSON.stringify({ payload: payload, rev: rev + 1, updated_at: new Date().toISOString() })
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    });
+  }
+
+  /* ---------- 应用远端 ---------- */
+  function adopt(row) {
+    if (!row || !row.payload) return;
+    var nr = Number(row.rev) || 0;
+    if (nr <= rev) return;
+    applying = true;
+    var ok = window.WHApp.applyRemote(row.payload);
+    if (ok) {
+      rev = nr; storeRev();
+      lastSent = JSON.stringify(window.WHApp.state);
+      badge("☁ 已同步 " + hhmm(), "ok");
+    }
+    setTimeout(function () { applying = false; }, 1200);
+  }
+
+  /* ---------- 推送 ---------- */
+  function doPush() {
+    if (!cfg || applying || pushing || !window.WHApp || !window.WHApp.authed()) return;
+    var payload = window.WHApp.state;
+    var snap = JSON.stringify(payload);
+    if (snap === lastSent) return;
+    pushing = true;
+    badge("☁ 同步中…");
+    patch(payload).then(function (rows) {
+      pushing = false;
+      if (Array.isArray(rows) && rows.length) {
+        rev = rev + 1; storeRev(); lastSent = snap;
+        badge("☁ 已同步 " + hhmm(), "ok");
+      } else {
+        /* 版本号落后：别人先写过，拉最新的覆盖 */
+        return pull().then(function (row) {
+          if (row) adopt(row);
+          else return create(payload).then(function () { rev = 1; storeRev(); lastSent = snap; badge("☁ 已同步 " + hhmm(), "ok"); });
+        });
+      }
+    }).catch(function (e) {
+      pushing = false;
+      badge("☁ 同步失败", "err");
+      console.warn("[sync] push:", e.message);
+    });
+  }
+
+  function queuePush() {
+    if (!cfg || applying) return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(doPush, 800);
+  }
+
+  /* ---------- 轮询 ---------- */
+  function pollOnce() {
+    if (!cfg || document.hidden || !window.WHApp || !window.WHApp.authed()) return;
+    pull().then(function (row) {
+      if (!row) return;
+      if (Number(row.rev) > rev) {
+        /* 正在输入时先不打断，下一轮再同步 */
+        var a = document.activeElement;
+        if (a && (a.tagName === "INPUT" || a.tagName === "SELECT" || a.tagName === "TEXTAREA") && $("app").contains(a)) return;
+        adopt(row);
+      }
+    }).catch(function (e) {
+      badge("☁ 同步失败", "err");
+      console.warn("[sync] poll:", e.message);
+    });
+  }
+
+  function start() {
+    if (!cfg || started) return;
+    started = true;
+    loadRev();
+    badge("☁ 连接中…");
+    pull().then(function (row) {
+      if (!row) {
+        return create(window.WHApp.state).then(function () {
+          rev = 1; storeRev(); lastSent = JSON.stringify(window.WHApp.state);
+          badge("☁ 已创建 " + hhmm(), "ok");
+        });
+      }
+      if (Number(row.rev) > rev) adopt(row);
+      else { lastSent = JSON.stringify(window.WHApp.state); badge("☁ 已同步 " + hhmm(), "ok"); }
+    }).catch(function (e) {
+      badge("☁ 连接失败", "err");
+      console.warn("[sync] start:", e.message);
+      started = false;
+    });
+    if (!pollTimer) pollTimer = setInterval(pollOnce, 3000);
+    window.WHApp.saveHook = queuePush;
+  }
+
+  function stop() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+    started = false;
+    if (window.WHApp) window.WHApp.saveHook = null;
+  }
+
+  /* ---------- 设置弹层 ---------- */
+  function openSync() {
+    if (!$("syncModal")) return;
+    $("syncErr").textContent = "";
+    if (cfg) {
+      $("syncUrl").value = cfg.url;
+      $("syncKey").value = cfg.key;
+      $("syncCh").value = cfg.channel || "default";
+    }
+    $("syncModal").classList.add("on");
+  }
+  function closeSync() { $("syncModal").classList.remove("on"); }
+
+  function readForm() {
+    var u = ($("syncUrl").value || "").trim().replace(/\/+$/, "");
+    var k = ($("syncKey").value || "").trim();
+    var c = ($("syncCh").value || "").trim() || "default";
+    if (!/^https:\/\/[A-Za-z0-9-]+\.supabase\.co$/i.test(u)) {
+      $("syncErr").textContent = "项目地址格式不对，应形如 https://abcd1234.supabase.co（当前版本仅支持 Supabase 官方域名）";
+      return null;
+    }
+    if (k.length < 40) { $("syncErr").textContent = "anon 公钥看起来不完整，请从 Project Settings → API 重新复制"; return null; }
+    if (!/^[A-Za-z0-9_-]{1,32}$/.test(c)) { $("syncErr").textContent = "同步通道只能用字母数字下划线连字符"; return null; }
+    return { url: u, key: k, channel: c };
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    loadCfg();
+    loadRev();
+    var b = $("syncBtn");
+    if (b) b.addEventListener("click", openSync);
+    var off = $("syncOff");
+    if (off) off.addEventListener("click", function () {
+      if (!confirm("断开云同步？本机数据会保留，但不再和手机同步。")) return;
+      stop();
+      cfg = null;
+      try { localStorage.removeItem(CFG_KEY); } catch (e) {}
+      badge("☁ 未启用");
+      closeSync();
+    });
+    var sv = $("syncSave");
+    if (sv) sv.addEventListener("click", function () {
+      var c = readForm();
+      if (!c) return;
+      $("syncErr").textContent = "正在测试连接…";
+      sv.disabled = true;
+      var probe = { url: c.url, key: c.key, channel: c.channel };
+      var bak = cfg; cfg = probe;
+      pull().then(function () {
+        cfg = c; storeCfg(); stop(); started = false;
+        $("syncErr").textContent = "";
+        sv.disabled = false;
+        closeSync();
+        start();
+      }).catch(function (e) {
+        cfg = bak; sv.disabled = false;
+        $("syncErr").textContent = "连接失败：" + e.message + "。请检查地址/公钥，以及是否已建 shared_state 表。";
+      });
+    });
+    var m = $("syncModal");
+    if (m) m.addEventListener("click", function (e) { if (e.target === this) closeSync(); });
+
+    if (cfg && window.WHApp && window.WHApp.authed()) start();
+  });
+
+  /* 登录成功后再启动同步 */
+  document.addEventListener("wh:login", function () { if (cfg) start(); });
+})();
 </script>
 </body>
 </html>
